@@ -91,7 +91,7 @@ CSS = """
 .sec-sub{ font-size:1.18rem; color:var(--muted); line-height:1.5; }
 .sec-rule{ height:5px; width:80px; background:var(--gold); border-radius:4px; margin-top:16px; }
 
-/* ── Key idea ── */
+/* ── Main idea ── */
 .key{ background:var(--navy); border-left:9px solid var(--gold); border-radius:18px;
   padding:24px 30px; margin:4px 0 28px; box-shadow:0 10px 26px rgba(0,33,71,.16); }
 .key-label{ color:var(--gold); font-size:.8rem; font-weight:800; letter-spacing:.16em;
@@ -194,6 +194,19 @@ CSS = """
 .eq-op{ display:flex; align-items:center; font-size:2rem; font-weight:800; color:var(--navy); }
 .eq-note{ text-align:center; font-size:1rem; color:var(--muted); margin:6px 0 4px; }
 
+/* ── Worked embedding example (Section 2) ── */
+.eg-wrap{ background:#fff; border:1px solid var(--border); border-radius:16px; padding:18px 18px;
+  overflow-x:auto; margin:4px 0 8px; }
+.eg{ display:grid; gap:8px 6px; align-items:center; min-width:820px; }
+.eg-label{ font-weight:800; font-size:.98rem; text-align:right; padding-right:10px; }
+.eg-col{ display:flex; justify-content:center; }
+.eg-col .tok{ font-size:.85rem; padding:5px 8px; }
+.eg-op{ font-size:1.3rem; font-weight:800; color:var(--navy); text-align:right; padding-right:14px;
+  line-height:.8; }
+.chip{ font-family:'JetBrains Mono', monospace; font-weight:700; font-size:.85rem; text-align:center;
+  padding:7px 2px; border-radius:9px; color:var(--c); border:2px solid var(--c);
+  background:color-mix(in srgb, var(--c) 10%, white); }
+
 /* ── Split bar (80/10/10) ── */
 .split{ display:flex; height:54px; border-radius:12px; overflow:hidden; margin:10px 0 6px;
   border:1px solid var(--border); }
@@ -263,7 +276,7 @@ def section_header(num, total, title, subtitle):
     </div>""")
 
 def key_idea(text):
-    html(f'<div class="key"><div class="key-label">Key idea</div>'
+    html(f'<div class="key"><div class="key-label">Main idea</div>'
          f'<div class="key-text">{text}</div></div>')
 
 def lead(text):
@@ -423,13 +436,6 @@ with st.sidebar:
     <div class="side-label">Progress</div>
     <div class="prog-text">Section {idx + 1} of {TOTAL}</div>
     <div class="prog"><div style="width:{(idx + 1) / TOTAL * 100:.0f}%;"></div></div>
-    <div class="side-label">Color code</div>
-    <div class="legend-item" style="--c:{BLUE};"><i></i>Input tokens (sentence A)</div>
-    <div class="legend-item" style="--c:{PURPLE};"><i></i>Sentence B</div>
-    <div class="legend-item" style="--c:{GOLD};"><i></i>[CLS] summary token</div>
-    <div class="legend-item" style="--c:{RED};"><i></i>[MASK] and hidden states</div>
-    <div class="legend-item" style="--c:{GREEN};"><i></i>Outputs and predictions</div>
-    <div class="legend-item" style="--c:{ORANGE};"><i></i>Training signal and loss</div>
     <div class="side-label">Quick setup</div>
     <span class="setup-cmd">pip install -r requirements.txt</span>
     <span class="setup-cmd">streamlit run bert_app.py</span>
@@ -529,32 +535,117 @@ elif num == 2:
              "<b>what</b> the word is, <b>which sentence</b> it belongs to, "
              "and <b>where</b> it sits.")
 
-    html(f"""
-    <div class="eq">
-      <div class="eq-box" style="--c:{BLUE};">
-        <div class="eq-name">Token</div>
-        <div class="eq-desc">Which word piece is this?<br>30,522-word vocabulary</div>
-      </div>
-      <div class="eq-op">+</div>
-      <div class="eq-box" style="--c:{PURPLE};">
-        <div class="eq-name">Segment</div>
-        <div class="eq-desc">Sentence A or sentence B?<br>Two learned vectors</div>
-      </div>
-      <div class="eq-op">+</div>
-      <div class="eq-box" style="--c:{ORANGE};">
-        <div class="eq-name">Position</div>
-        <div class="eq-desc">Where in the sequence?<br>Positions 0 to 511, learned</div>
-      </div>
-      <div class="eq-op">=</div>
-      <div class="eq-box" style="--c:{NAVY};">
-        <div class="eq-name">Input vector</div>
-        <div class="eq-desc">768 numbers per token<br>fed to encoder layer 1</div>
-      </div>
-    </div>
-    <p class="eq-note">All three are 768-dim vectors, <b>added</b> element by element
-    (not concatenated). The original Transformer had only token + position.</p>
-    """)
+    lead("An encoder layer only sees numbers, so each token must become a vector first. "
+         "One vector per token is not enough, though. BERT has to know three separate "
+         "things about every token, and it keeps <b>one learned lookup table</b> for each.")
 
+    # ── The three questions ──────────────────────────────────────────────────
+    sub("Three questions BERT asks about every token")
+    grid([
+        card("1. Token embedding: what is the word?",
+             f"{tag('Table: 30,522 rows x 768', BLUE)}<br>"
+             "<b>Think of a dictionary.</b> Each token ID picks one row of the table. "
+             "The same word always gets the same row, wherever it appears.<br><br>"
+             "<b>Without it:</b> BERT would not know which words it is reading.",
+             BLUE),
+        card("2. Segment embedding: which sentence?",
+             f"{tag('Table: 2 rows x 768', PURPLE)}<br>"
+             "<b>Think of team jerseys.</b> Every token in sentence A wears jersey A; "
+             "every token in sentence B wears jersey B.<br><br>"
+             "<b>Without it:</b> in <i>question [SEP] passage</i>, BERT could not tell "
+             "which words belong to the question.",
+             PURPLE),
+        card("3. Position embedding: where is it?",
+             f"{tag('Table: 512 rows x 768', ORANGE)}<br>"
+             "<b>Think of seat numbers.</b> Position 0 gets row 0, position 1 gets row 1, "
+             "and so on up to 511.<br><br>"
+             "<b>Without it:</b> self-attention ignores word order, so "
+             "<i>dog bites man</i> and <i>man bites dog</i> would look identical.",
+             ORANGE),
+    ], cols=3)
+
+    # ── Worked example, column by column ─────────────────────────────────────
+    sub("Watch it happen on one input")
+    hint("Two sentences packed into one input: <b>the cat sat on the mat</b> and "
+         "<b>it slept</b>. Read each column top to bottom.")
+
+    ex_tokens = ["[CLS]", "the", "cat", "sat", "on", "the", "mat", "[SEP]", "it", "slept", "[SEP]"]
+    ex_segs   = [0] * 8 + [1] * 3
+    same      = {1, 5}   # the two "the" tokens
+
+    def chip(text, color, extra=""):
+        return f'<div class="chip" style="--c:{color};{extra}">{text}</div>'
+
+    def emb_name(t):
+        return {"[CLS]": "CLS", "[SEP]": "SEP"}.get(t, t)
+
+    cols = len(ex_tokens)
+    cells = '<div class="eg-label"></div>'
+    for i, (t, s) in enumerate(zip(ex_tokens, ex_segs)):
+        cls = "eg-col same" if i in same else "eg-col"
+        cells += f'<div class="{cls}">{tok(t, token_kind(t, s))}</div>'
+    rows = [
+        ("Token", BLUE,   lambda i, t, s: f"E<sub>{emb_name(t)}</sub>"),
+        ("Segment", PURPLE, lambda i, t, s: f"E<sub>{'A' if s == 0 else 'B'}</sub>"),
+        ("Position", ORANGE, lambda i, t, s: f"E<sub>{i}</sub>"),
+    ]
+    for r, (name, color, fn) in enumerate(rows):
+        if r > 0:
+            cells += f'<div class="eg-op">+</div>' + '<div></div>' * cols
+        cells += f'<div class="eg-label" style="color:{color};">{name}</div>'
+        for i, (t, s) in enumerate(zip(ex_tokens, ex_segs)):
+            ring = "box-shadow:0 0 0 3px #FFC400;" if (name == "Token" and i in same) else ""
+            cells += chip(fn(i, t, s), color, ring)
+    cells += '<div class="eg-op">=</div>' + '<div></div>' * cols
+    cells += f'<div class="eg-label" style="color:{NAVY};">Input vector</div>'
+    for i in range(cols):
+        cells += chip(f"x<sub>{i}</sub>", NAVY, "background:#002147;color:#fff;")
+
+    html(f'<div class="eg-wrap"><div class="eg" style="grid-template-columns:'
+         f'120px repeat({cols}, minmax(58px, 1fr));">{cells}</div></div>')
+
+    tip("Look at the two <b>the</b> tokens (gold ring). They get the <b>exact same</b> token "
+        "embedding, E<sub>the</sub>. Only their position embeddings differ "
+        "(E<sub>1</sub> and E<sub>5</sub>), so they enter the encoder as two "
+        "<b>different</b> vectors. Notice too that the first [SEP] belongs to sentence A.")
+
+    # ── Why add ──────────────────────────────────────────────────────────────
+    sub("Why add them instead of stacking them side by side?")
+    hint("A tiny made-up example with 4 numbers per vector instead of 768:")
+    toy = [("Token: cat", BLUE,     [0.2, -0.5,  0.8,  0.1]),
+           ("Segment: A", PURPLE,   [0.1,  0.1, -0.1,  0.0]),
+           ("Position: 2", ORANGE,  [0.0,  0.3,  0.1, -0.2]),
+           ("Sum = input", NAVY,    [0.3, -0.1,  0.8, -0.1])]
+    table(["Vector", "dim 1", "dim 2", "dim 3", "dim 4"],
+          [[tag(n, c)] + [f"{v:+.1f}" for v in vals] for n, c, vals in toy],
+          num_cols=(1, 2, 3, 4), highlight_rows=(3,))
+    steps([
+        "<b>Same width everywhere.</b> Adding keeps each token at 768 numbers, the width "
+        "every encoder layer expects. Stacking would make it 2,304.",
+        "<b>Nothing important is lost.</b> The three tables are learned together, so "
+        "training spreads word, sentence and position information across the 768 numbers "
+        "in ways the layers can still pull apart.",
+        "<b>One more step.</b> BERT applies <b>LayerNorm</b> (and dropout) to the sum. "
+        "The result is what encoder layer 1 actually receives.",
+    ])
+
+    html(f"""
+    <div class="key" style="background:#fff;border:1px solid #D9E1EC;border-left:9px solid {GOLD};
+         box-shadow:none;text-align:center;">
+      <div class="key-label" style="color:{NAVY};">The full recipe</div>
+      <div class="key-text" style="color:{NAVY};font-family:'JetBrains Mono',monospace;font-size:1.15rem;">
+        x<sub>i</sub> = LayerNorm(
+        <span style="color:{BLUE};">E<sub>token</sub></span> +
+        <span style="color:{PURPLE};">E<sub>segment</sub></span> +
+        <span style="color:{ORANGE};">E<sub>position</sub></span> )
+      </div>
+      <div class="hint" style="margin:10px 0 0;">
+        The three tables hold about <b>23.8 million</b> learned numbers, roughly a fifth of
+        BERT-Base's 110 million. The original Transformer used fixed position waves and
+        had no segment table.</div>
+    </div>""")
+
+    # ── Special tokens ───────────────────────────────────────────────────────
     sub("The three special tokens")
     grid([
         card("[CLS] the summary token",
@@ -570,7 +661,8 @@ elif num == 2:
              "that mismatch.", RED),
     ], cols=3)
 
-    sub("Try it: see how BERT tokenizes a sentence")
+    # ── Live demo ────────────────────────────────────────────────────────────
+    sub("Try it: tokenize, then look inside the real vectors")
     hint("Type a sentence, or two, and press Tokenize. Try a long or unusual word such as "
          "<b>embeddings</b> to see WordPiece split it into pieces marked with ##.")
 
@@ -580,9 +672,11 @@ elif num == 2:
             sent1 = st.text_input("Sentence A", value="The cat sat on the mat.")
         with c2:
             sent2 = st.text_input("Sentence B (optional)", value="")
-        run = st.button("Tokenize", type="primary")
+        if st.button("Tokenize", type="primary"):
+            st.session_state.tok_inputs = (sent1, sent2)
 
-    if run:
+    # Results stay visible while the student picks tokens below
+    if st.session_state.get("tok_inputs") == (sent1, sent2):
         tokenizer = load_tokenizer()
         enc = (tokenizer(sent1, sent2, return_tensors="pt") if sent2.strip()
                else tokenizer(sent1, return_tensors="pt"))
@@ -601,28 +695,67 @@ elif num == 2:
              for i, (t, tid, s) in enumerate(zip(tokens, ids, seg_ids))],
             num_cols=(0, 2),
         )
-        hint(f"<b>{len(tokens)} tokens</b> in total, including [CLS] and [SEP]. "
-             "Each becomes one 768-dim vector after the three embeddings are added.")
 
-    with st.expander("Show the tokenization code"):
+        sub("Look inside: the three vectors for one token")
+        hint("These are BERT's real learned numbers, first 8 of 768. With the default "
+             "sentence, pick each <b>the</b> in turn: the token row stays the same while "
+             "the position row changes.")
+
+        pick = st.selectbox("Token to inspect", list(range(len(tokens))),
+                            index=min(1, len(tokens) - 1),
+                            format_func=lambda i: f"position {i}:   {tokens[i]}")
+
+        import torch
+        emb = load_bert().embeddings
+        with torch.no_grad():
+            tv = emb.word_embeddings.weight[ids[pick]]
+            sv = emb.token_type_embeddings.weight[seg_ids[pick]]
+            pv = emb.position_embeddings.weight[pick]
+            total  = tv + sv + pv
+            normed = emb.LayerNorm(total)
+
+        seg_name = "A" if seg_ids[pick] == 0 else "B"
+        vec_rows = [
+            (f"Token: {tokens[pick]}", BLUE,   tv),
+            (f"Segment: {seg_name}",   PURPLE, sv),
+            (f"Position: {pick}",      ORANGE, pv),
+            ("Sum",                    NAVY,   total),
+            ("After LayerNorm",        GREEN,  normed),
+        ]
+        table(["Vector"] + [f"d{j}" for j in range(8)],
+              [[tag(n, c)] + [f"{v:+.3f}" for v in vec.detach().numpy()[:8]]
+               for n, c, vec in vec_rows],
+              num_cols=tuple(range(1, 9)), highlight_rows=(4,))
+        hint("Check any column: token + segment + position equals the Sum row. "
+             "LayerNorm then rescales the sum so its 768 numbers have mean 0 and "
+             "standard deviation 1 before learned scaling.")
+
+    with st.expander("Show the tokenization and embedding code"):
         st.code("""
-from transformers import BertTokenizer
+from transformers import BertTokenizer, BertModel
+import torch
 
 tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+model     = BertModel.from_pretrained("bert-base-uncased")
 
-# One sentence
 enc = tokenizer("The cat sat on the mat.", return_tensors="pt")
-# enc["input_ids"]       token IDs, shape (1, seq_len)
-# enc["token_type_ids"]  segment IDs (0 = sentence A)
-# enc["attention_mask"]  1 for real tokens, 0 for padding
-
 tokens = tokenizer.convert_ids_to_tokens(enc["input_ids"][0])
 # ['[CLS]', 'the', 'cat', 'sat', 'on', 'the', 'mat', '.', '[SEP]']
 
-# Two sentences (question answering, NSP)
-enc2 = tokenizer("The cat sat on the mat.", "Where did the cat sit?",
-                 return_tensors="pt")
-# token_type_ids: 0 for sentence A tokens, 1 for sentence B tokens
+emb = model.embeddings                        # the three lookup tables
+print(emb.word_embeddings.weight.shape)       # (30522, 768)  token table
+print(emb.token_type_embeddings.weight.shape) # (2, 768)      segment table
+print(emb.position_embeddings.weight.shape)   # (512, 768)    position table
+
+i   = 1                                       # the first "the"
+tid = enc["input_ids"][0, i]
+seg = enc["token_type_ids"][0, i]
+with torch.no_grad():
+    x = (emb.word_embeddings.weight[tid]
+         + emb.token_type_embeddings.weight[seg]
+         + emb.position_embeddings.weight[i])
+    x = emb.LayerNorm(x)                      # this is what layer 1 receives
+print(x.shape)                                # (768,)
 """, language="python")
 
 
