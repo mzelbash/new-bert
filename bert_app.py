@@ -535,29 +535,41 @@ elif num == 2:
              "<b>what</b> the word is, <b>which sentence</b> it belongs to, "
              "and <b>where</b> it sits.")
 
-    lead("An encoder layer only sees numbers, so each token must become a vector first. "
-         "One vector per token is not enough, though. BERT has to know three separate "
-         "things about every token, and it keeps <b>one learned lookup table</b> for each.")
+    lead("Unlike the original Transformer, BERT uses <b>three embeddings</b> for every "
+         "token: a <b>token</b> embedding, a <b>segment</b> embedding and a "
+         "<b>position</b> embedding. Each one is a learned lookup table, and the three "
+         "vectors are added together.")
 
-    # ── The three questions ──────────────────────────────────────────────────
-    sub("Three questions BERT asks about every token")
+    table(
+        ["Model", "Embeddings used"],
+        [
+            ["Original Transformer",
+             f"{tag('Token', BLUE)} + {tag('Position (fixed sine waves)', ORANGE)}"],
+            ["BERT",
+             f"{tag('Token', BLUE)} + {tag('Segment', PURPLE)} + "
+             f"{tag('Position (learned)', ORANGE)}"],
+        ],
+        highlight_rows=(1,),
+    )
+
+    sub("The three embeddings")
     grid([
-        card("1. Token embedding: what is the word?",
+        card("1. Token embedding",
              f"{tag('Table: 30,522 rows x 768', BLUE)}<br>"
-             "<b>Think of a dictionary.</b> Each token ID picks one row of the table. "
+             "<b>Tells BERT what the word is.</b> Think of a dictionary: each token ID picks one row of the table. "
              "The same word always gets the same row, wherever it appears.<br><br>"
              "<b>Without it:</b> BERT would not know which words it is reading.",
              BLUE),
-        card("2. Segment embedding: which sentence?",
+        card("2. Segment embedding",
              f"{tag('Table: 2 rows x 768', PURPLE)}<br>"
-             "<b>Think of team jerseys.</b> Every token in sentence A wears jersey A; "
+             "<b>Tells BERT which sentence the token is in.</b> Think of team jerseys: every token in sentence A wears jersey A; "
              "every token in sentence B wears jersey B.<br><br>"
              "<b>Without it:</b> in <i>question [SEP] passage</i>, BERT could not tell "
              "which words belong to the question.",
              PURPLE),
-        card("3. Position embedding: where is it?",
+        card("3. Position embedding",
              f"{tag('Table: 512 rows x 768', ORANGE)}<br>"
-             "<b>Think of seat numbers.</b> Position 0 gets row 0, position 1 gets row 1, "
+             "<b>Tells BERT where the token sits.</b> Think of seat numbers: position 0 gets row 0, position 1 gets row 1, "
              "and so on up to 511.<br><br>"
              "<b>Without it:</b> self-attention ignores word order, so "
              "<i>dog bites man</i> and <i>man bites dog</i> would look identical.",
