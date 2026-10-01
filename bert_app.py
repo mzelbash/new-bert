@@ -7,6 +7,8 @@ Run:  streamlit run bert_app.py
 Theme: put config.toml in a folder named .streamlit next to this file.
 """
 
+import re
+
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
@@ -98,6 +100,12 @@ CSS = """
   text-transform:uppercase; }
 .key-text{ color:#fff; font-size:1.45rem; font-weight:600; line-height:1.45; margin-top:8px; }
 .key-text b{ color:var(--gold); font-weight:700; }
+.key.hero{ padding:32px 38px; border-left-width:12px; margin:8px 0 26px; }
+.key.hero .key-text{ font-size:1.85rem; line-height:1.4; margin-top:10px; }
+@media (max-width:900px){
+  .key.hero{ padding:24px 26px; }
+  .key.hero .key-text{ font-size:1.45rem; }
+}
 
 /* ── Body text ── */
 .lead{ font-size:1.13rem; line-height:1.75; color:#1E293B; margin:0 0 22px; }
@@ -175,15 +183,19 @@ CSS = """
 .step-text b{ color:var(--navy); }
 
 /* ── Flow (Section 1) ── */
-.flow{ display:flex; align-items:stretch; gap:10px; margin:6px 0 26px; flex-wrap:wrap; }
-.flow-box{ flex:1 1 220px; background:#fff; border:1px solid var(--border);
-  border-top:6px solid var(--c); border-radius:16px; padding:18px 20px; }
-.flow-kicker{ font-size:.75rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase;
+.flow{ display:flex; align-items:stretch; gap:14px; margin:10px 0 32px; flex-wrap:wrap; }
+.flow-box{ flex:1 1 265px; background:#fff; border:1px solid var(--border);
+  border-top:8px solid var(--c); border-radius:18px; padding:24px 26px 22px;
+  box-shadow:0 4px 16px rgba(0,33,71,.07); }
+.flow-kicker{ font-size:.82rem; font-weight:800; letter-spacing:.13em; text-transform:uppercase;
   color:var(--c); }
-.flow-title{ font-size:1.25rem; font-weight:800; color:var(--navy); margin:6px 0 10px; }
-.flow-box ul{ margin:0; padding-left:18px; font-size:1rem; line-height:1.75; color:#334155; }
-.flow-op{ display:flex; align-items:center; font-size:2.2rem; font-weight:800; color:var(--navy);
-  padding:0 2px; }
+.flow-title{ font-size:1.5rem; font-weight:800; color:var(--navy); margin:8px 0 14px;
+  letter-spacing:-.01em; line-height:1.2; }
+.flow-box ul{ margin:0; padding-left:20px; font-size:1.08rem; line-height:1.95; color:#334155; }
+.flow-box ul b{ color:var(--navy); }
+.flow-op{ display:flex; align-items:center; font-size:2.9rem; font-weight:800; color:var(--navy);
+  padding:0 4px; }
+@media (max-width:900px){ .flow-op{ justify-content:center; font-size:2.2rem; } }
 
 /* ── Equation boxes (Section 2) ── */
 .eq{ display:flex; align-items:stretch; gap:10px; flex-wrap:wrap; margin:6px 0 10px; }
@@ -207,24 +219,67 @@ CSS = """
   padding:7px 2px; border-radius:9px; color:var(--c); border:2px solid var(--c);
   background:color-mix(in srgb, var(--c) 10%, white); }
 
+/* ── Joint pretraining banner (Sections 3 and 4) ── */
+.dual{ background:#fff; border:1px solid var(--border); border-radius:16px;
+  padding:14px 18px 15px; margin:2px 0 26px; }
+.dual-label{ font-size:.72rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase;
+  color:#64748B; margin-bottom:11px; }
+.dual-row{ display:flex; align-items:stretch; gap:12px; flex-wrap:wrap; }
+.dual-box{ flex:1 1 235px; border-radius:12px; padding:11px 15px;
+  border:2px solid #E6EBF2; background:#F8FAFC; }
+.dual-box.on{ border-color:var(--c); background:color-mix(in srgb, var(--c) 9%, white); }
+.dual-n{ font-size:.71rem; font-weight:800; letter-spacing:.11em; text-transform:uppercase;
+  color:#A3AFBF; }
+.dual-box.on .dual-n{ color:var(--c); }
+.dual-t{ font-size:1.06rem; font-weight:800; color:#A3AFBF; margin-top:2px; }
+.dual-box.on .dual-t{ color:var(--navy); }
+.dual-d{ font-size:.95rem; color:#A3AFBF; line-height:1.5; margin-top:3px; }
+.dual-box.on .dual-d{ color:#475569; }
+.dual-op{ display:flex; align-items:center; font-size:1.7rem; font-weight:800;
+  color:var(--navy); }
+@media (max-width:900px){ .dual-op{ justify-content:center; } }
+.dual-foot{ font-family:'JetBrains Mono', monospace; font-size:.93rem; color:var(--navy);
+  text-align:center; margin-top:12px; background:#F1F5F9; border-radius:9px; padding:8px 10px; }
+.dual-foot b{ color:var(--orange); }
+
+/* ── Vertical pipeline (Section 4) ── */
+.pipe{ margin:8px 0 26px; }
+.pipe-row{ display:flex; gap:16px; align-items:flex-start; }
+.pipe-num{ flex:0 0 42px; height:42px; border-radius:50%; background:var(--c); color:#fff;
+  font-weight:800; font-size:1.1rem; display:flex; align-items:center; justify-content:center;
+  box-shadow:0 3px 10px rgba(0,33,71,.14); }
+.pipe-body{ flex:1; min-width:0; background:#fff; border:1px solid var(--border);
+  border-left:6px solid var(--c); border-radius:14px; padding:15px 22px; }
+.pipe-what{ font-size:1.22rem; font-weight:800; color:var(--navy); letter-spacing:-.01em; }
+.pipe-why{ font-size:1.04rem; line-height:1.7; color:#334155; margin-top:6px; }
+.pipe-why b{ color:var(--navy); }
+.pipe-why code{ font-family:'JetBrains Mono', monospace; font-size:.9rem; background:#F1F5F9;
+  padding:2px 7px; border-radius:6px; color:var(--navy); }
+.pipe-io{ font-family:'JetBrains Mono', monospace; font-size:.98rem; line-height:1.9;
+  color:var(--navy); background:#F7F9FC; border-radius:10px; padding:10px 14px;
+  margin:4px 0 10px; }
+.pipe-io b{ color:var(--blue); }
+.pipe-link{ width:42px; text-align:center; font-size:1.5rem; color:#94A3B8;
+  line-height:1.5; font-weight:700; }
+
+/* ── Context comparison (Section 3) ── */
+.cmp{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:6px 0 22px; }
+@media (max-width:900px){ .cmp{ grid-template-columns:1fr; } }
+.cmp-box{ background:#fff; border:1px solid var(--border); border-top:6px solid var(--c);
+  border-radius:16px; padding:16px 20px; }
+.cmp-kicker{ font-size:.76rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--c); margin-bottom:10px; }
+.cmp-sent{ font-family:'JetBrains Mono', monospace; font-size:1.02rem; line-height:1.9;
+  color:var(--navy); }
+.cmp-blank{ background:#FFE4EA; color:var(--red); border:2px solid var(--red);
+  border-radius:8px; padding:2px 8px; font-weight:700; }
+.cmp-cut{ text-decoration:line-through; color:#94A3B8; }
+
 /* ── Split bar (80/10/10) ── */
 .split{ display:flex; height:54px; border-radius:12px; overflow:hidden; margin:10px 0 6px;
   border:1px solid var(--border); }
 .split div{ display:flex; align-items:center; justify-content:center; color:#fff;
   font-weight:700; font-size:.95rem; text-align:center; padding:0 6px; line-height:1.2; }
-
-/* ── Cross-attention diagram ── */
-.xattn{ display:grid; grid-template-columns:1fr auto 1.2fr auto 1fr; gap:10px;
-  align-items:center; margin:8px 0 20px; }
-@media (max-width:900px){ .xattn{ grid-template-columns:1fr; } .xattn .arrow{ transform:rotate(90deg); } }
-.x-box{ background:#fff; border:2px solid var(--c); border-radius:14px; padding:16px;
-  text-align:center; }
-.x-title{ font-weight:800; color:var(--c); font-size:1.08rem; }
-.x-desc{ font-size:.95rem; color:#334155; margin-top:6px; line-height:1.5; }
-.x-core{ background:var(--navy); color:#fff; border-radius:14px; padding:18px; text-align:center; }
-.x-core .f{ font-family:'JetBrains Mono', monospace; font-size:1.02rem; color:var(--gold);
-  margin-top:6px; }
-.arrow{ font-size:2rem; font-weight:800; color:var(--navy); text-align:center; }
 
 /* ── FAQ ── */
 .qa{ background:#fff; border:1px solid var(--border); border-radius:14px; margin:0 0 12px;
@@ -275,8 +330,9 @@ def section_header(num, total, title, subtitle):
       <div class="sec-rule"></div>
     </div>""")
 
-def key_idea(text):
-    html(f'<div class="key"><div class="key-label">Main idea</div>'
+def key_idea(text, hero=False):
+    html(f'<div class="key{" hero" if hero else ""}">'
+         f'<div class="key-label">Main idea</div>'
          f'<div class="key-text">{text}</div></div>')
 
 def lead(text):
@@ -350,6 +406,27 @@ def token_legend(show_b=True):
         for bg, bd, lab in items)
     html(f'<div class="tok-legend">{spans}</div>')
 
+def pretrain_banner(active):
+    """The two pretraining objectives, with the current one lit. Shown in BOTH Section 3
+    and Section 4 so it stays obvious that they run together, not one after the other."""
+    objs = [(1, RED,   "Objective 1", "Masked Language Modeling",
+             "Predict words hidden behind [MASK]"),
+            (2, GREEN, "Objective 2", "Next Sentence Prediction",
+             "Decide whether sentence B follows A")]
+    boxes = []
+    for n, c, kicker, title, desc in objs:
+        boxes.append(f'<div class="dual-box{" on" if n == active else ""}" style="--c:{c};">'
+                     f'<div class="dual-n">{kicker}</div>'
+                     f'<div class="dual-t">{title}</div>'
+                     f'<div class="dual-d">{desc}</div></div>')
+    html(f"""
+    <div class="dual">
+      <div class="dual-label">One pretraining run &mdash; both objectives at the same time</div>
+      <div class="dual-row">{boxes[0]}<div class="dual-op">+</div>{boxes[1]}</div>
+      <div class="dual-foot">total loss = <b>MLM loss</b> + <b>NSP loss</b>,
+        back-propagated together</div>
+    </div>""")
+
 def faq(items):
     blocks = "".join(
         f'<div class="qa"><div class="qa-q"><span>Q{i}</span>{q}</div>'
@@ -377,23 +454,39 @@ def style_axes(ax):
 
 
 # ── Model loading (imports are lazy so the app opens instantly) ───────────────
+def _quiet_transformers():
+    """transformers v5 prints a key-by-key load report for every checkpoint.
+    The 'UNEXPECTED' rows are normal here (each head ignores the other's weights)."""
+    import transformers
+    transformers.logging.set_verbosity_error()
+
 @st.cache_resource(show_spinner="Loading BERT tokenizer...")
 def load_tokenizer():
+    _quiet_transformers()
     from transformers import BertTokenizer
     return BertTokenizer.from_pretrained("bert-base-uncased")
 
 @st.cache_resource(show_spinner="Loading BERT model (about 30 s the first time)...")
 def load_bert():
+    _quiet_transformers()
     from transformers import BertModel
     return BertModel.from_pretrained("bert-base-uncased")
 
+@st.cache_resource(show_spinner="Loading BERT's next-sentence head...")
+def load_nsp():
+    _quiet_transformers()
+    from transformers import BertForNextSentencePrediction
+    return BertForNextSentencePrediction.from_pretrained("bert-base-uncased")
+
 @st.cache_resource(show_spinner="Loading fill-mask pipeline...")
 def load_fill_mask():
+    _quiet_transformers()
     from transformers import pipeline
     return pipeline("fill-mask", model="bert-base-uncased")
 
 @st.cache_resource(show_spinner="Loading sentiment pipeline...")
 def load_sentiment():
+    _quiet_transformers()
     from transformers import pipeline
     return pipeline("sentiment-analysis",
                     model="distilbert-base-uncased-finetuned-sst-2-english")
@@ -407,7 +500,7 @@ SECTIONS = [
     "Pretraining 2: Next Sentence",
     "The [CLS] Token",
     "Fine-tuning for Tasks",
-    "Encoder Output to a Decoder",
+    "Where BERT Fits Real Problems",
     "BERT Variants",
 ]
 LABELS = [f"{i}.  {s}" for i, s in enumerate(SECTIONS, 1)]
@@ -453,7 +546,7 @@ if num == 1:
 
     key_idea("BERT is the <b>Transformer encoder</b> you already know, stacked "
              "<b>12 times</b> and pretrained to fill in hidden words using context "
-             "from <b>both sides</b>.")
+             "from <b>both sides</b>.", hero=True)
 
     lead("In class you traced <b>\"the cat sat on the mat\"</b> through a Transformer encoder. "
          "Every word attended to every other word, so the output for <b>\"sat\"</b> knew about "
@@ -464,44 +557,24 @@ if num == 1:
       <div class="flow-box" style="--c:{BLUE};">
         <div class="flow-kicker">What you already know</div>
         <div class="flow-title">Transformer encoder</div>
-        <ul><li>Multi-head self-attention</li><li>Feed-forward network</li>
+        <ul><li><b>Multi-head self-attention</b></li><li>Feed-forward network</li>
         <li>LayerNorm and residuals</li><li>One rich vector per word</li></ul>
       </div>
       <div class="flow-op">+</div>
       <div class="flow-box" style="--c:{ORANGE};">
         <div class="flow-kicker">What BERT adds</div>
         <div class="flow-title">Stacking and pretraining</div>
-        <ul><li>12 encoder blocks (24 in Large)</li><li>768-dim hidden size</li>
-        <li>Special tokens [CLS] [SEP] [MASK]</li><li>Self-supervised pretraining</li></ul>
+        <ul><li><b>12 encoder blocks</b> (24 in Large)</li><li><b>768-dim</b> hidden size</li>
+        <li>Special tokens [CLS] [SEP] [MASK]</li><li><b>Self-supervised</b> pretraining</li></ul>
       </div>
       <div class="flow-op">=</div>
       <div class="flow-box" style="--c:{GREEN};">
         <div class="flow-kicker">The result</div>
         <div class="flow-title">A reusable language model</div>
-        <ul><li>110M pretrained parameters</li><li>Fine-tune for almost any task</li>
-        <li>Reads context in both directions</li><li>State of the art in 2018</li></ul>
+        <ul><li><b>110M</b> pretrained parameters</li><li>Fine-tune for almost any task</li>
+        <li>Reads context in <b>both directions</b></li><li>State of the art in 2018</li></ul>
       </div>
     </div>""")
-
-    sub("What changes, what stays the same")
-    table(
-        ["Aspect", "Original Transformer", "BERT"],
-        [
-            ["Architecture", "Encoder and decoder stacks (6 layers each)",
-             f"Encoder only, stacked {tag('12 Base', BLUE)}{tag('24 Large', BLUE)}"],
-            ["Attention direction", "Encoder: both directions. Decoder: left to right",
-             f"{tag('Always bidirectional', GREEN)} every token sees every token"],
-            ["Hidden size", "512", "768 (Base) or 1024 (Large)"],
-            ["Positional encoding", "Fixed sine and cosine waves",
-             "Learned position embeddings (like ViT)"],
-            ["Input tokens", "Subword tokens",
-             f"WordPiece tokens plus {tag('[CLS]', NAVY)}{tag('[SEP]', NAVY)}{tag('[MASK]', RED)}"],
-            ["Training objective", "Supervised translation (decoder predicts next target word)",
-             f"{tag('Self-supervised', ORANGE)} Masked LM + Next Sentence Prediction"],
-            ["Output used for", "Generating the translated sentence",
-             "[CLS] for sentence tasks, every token for word-level tasks"],
-        ],
-    )
 
     tip("BERT comes from the 2018 paper <i>BERT: Pre-training of Deep Bidirectional "
         "Transformers for Language Understanding</i> by Devlin et al. at Google. "
@@ -512,7 +585,9 @@ if num == 1:
         faq([
             ("Is BERT an encoder or a decoder?",
              "Encoder only. It produces a rich vector for each input token but does not "
-             "generate new text by itself. To generate text you add a decoder (Section 7)."),
+             "generate new text by itself. Generating text is a decoder's job, which is "
+             "why BERT is paired with a task head or a separate decoder model rather than "
+             "writing anything on its own."),
             ("How is BERT different from GPT?",
              "GPT is decoder-only and trained to predict the next token, left to right. "
              "BERT is encoder-only and trained to predict hidden tokens using both sides. "
@@ -778,6 +853,8 @@ elif num == 3:
     section_header(3, TOTAL, "Pretraining Task 1: Masked Language Model",
                    "How BERT learns from plain text with no human labels")
 
+    pretrain_banner(1)
+
     key_idea("Hide <b>15% of the words</b> and make BERT guess them. To guess well, "
              "it has to read the words on <b>both sides</b> of the blank.")
 
@@ -792,18 +869,7 @@ elif num == 3:
     together make <b style="color:{GREEN};">"sat"</b> the obvious answer.</p>
     """)
 
-    sub("The 15% masking rule")
-    steps([
-        "<b>Pick 15% of the tokens</b> in each sequence. In a short sentence like "
-        "\"the cat sat on the mat\", that is about one word.",
-        "<b>Treat each picked token one of three ways</b> (bar below).",
-        "<b>Predict the original word</b> at each picked position. The loss is computed "
-        "<b>only at those positions</b>, not across the whole sentence.",
-        "<b>Why not always use [MASK]?</b> [MASK] never shows up at fine-tuning time. "
-        "The random and unchanged cases force BERT to build a good vector for "
-        "<b>every</b> token, not just the blanks.",
-    ])
-
+    sub("The 15% rule")
     html(f"""
     <div class="split">
       <div style="width:80%;background:{RED};">80%</div>
@@ -816,53 +882,150 @@ elif num == 3:
       {tag('10% left unchanged: "the cat sat on the mat"', '#64748B')}
     </div>""")
 
-    tip("Compare with the Transformer decoder you studied: it predicts the <b>next</b> word "
-        "from the left side only. BERT predicts a <b>hidden</b> word using both sides. "
-        "In \"the cat [MASK] on the mat\", a left-to-right model only has \"the cat\" to work with.")
+    steps([
+        "<b>Pick 15% of the tokens</b> at random. In a six-word sentence, about one word.",
+        "<b>Corrupt each picked token</b> using the 80/10/10 split above.",
+        "<b>Predict the original word</b> at those positions only. The loss ignores "
+        "every other position.",
+    ])
 
-    sub("Try it: let BERT fill in the blank")
-    hint("Put exactly one <b>[MASK]</b> in the sentence and press Predict.")
+    tip("<b>Why not always use [MASK]?</b> Because [MASK] never appears during fine-tuning. "
+        "The random and unchanged cases force BERT to build a usable vector for "
+        "<b>every</b> token, not just the blanks.")
+
+    sub("Try it: hide a word, then take away the right side")
+    hint("Press <b>Load sentence</b>, then <b>click any word</b> to hide it. BERT guesses it "
+         "twice: once from the <b>whole sentence</b>, once with every word after the blank "
+         "<b>cut away</b> &mdash; all a left-to-right model like GPT would ever see. The full "
+         "stop stays on both runs, so BERT is always asked for a <b>word</b>, never "
+         "for punctuation.")
 
     with st.container(border=True):
-        mlm_sentence = st.text_input("Sentence with one [MASK]",
-                                     value="The cat [MASK] on the mat.")
-        run = st.button("Predict masked word", type="primary")
+        mlm_sentence = st.text_input("Sentence", value="The cat sat on the mat.",
+                                     key="mlm_sent")
+        if st.button("Load sentence", type="primary"):
+            st.session_state.mlm_loaded = mlm_sentence
+            st.session_state.mlm_pick = None
 
-    if run:
-        n_masks = mlm_sentence.count("[MASK]")
-        if n_masks != 1:
-            st.error(f"Please use exactly one [MASK]. This sentence has {n_masks}.")
+    # The sentence-final punctuation is held back and re-attached to BOTH runs. Without
+    # it, "The cat [MASK]" asks BERT to end a sentence, and it answers "." at 80%, which
+    # says nothing about context. With it, both runs must name a word.
+    body, tail = re.match(r"^(.*?)([^\w\s]*)\s*$", mlm_sentence.strip(), re.S).groups()
+    words = body.strip().split()
+    tail  = tail or "."
+
+    if st.session_state.get("mlm_loaded") == mlm_sentence and words:
+        if st.session_state.get("mlm_pick") is None:
+            st.session_state.mlm_pick = min(2, len(words) - 1)
+
+        sub("Click a word to hide it")
+        PER_ROW = 8
+        for start in range(0, len(words), PER_ROW):
+            row = list(range(start, min(start + PER_ROW, len(words))))
+            cols = st.columns(PER_ROW)
+            for col, i in zip(cols, row):
+                with col:
+                    if st.button(words[i], key=f"mlm_w{i}", use_container_width=True,
+                                 type="primary" if st.session_state.mlm_pick == i
+                                 else "secondary"):
+                        st.session_state.mlm_pick = i
+
+        pick      = min(st.session_state.mlm_pick, len(words) - 1)
+        true_word = re.sub(r"^\W+|\W+$", "", words[pick]).lower()
+        both      = " ".join(words[:pick] + ["[MASK]"] + words[pick + 1:]) + tail
+        left      = " ".join(words[:pick] + ["[MASK]"]) + tail
+        cut       = " ".join(words[pick + 1:])
+        same      = (pick == len(words) - 1)
+
+        blank = '<span class="cmp-blank">[MASK]</span>'
+        html(f"""
+        <div class="cmp">
+          <div class="cmp-box" style="--c:{GREEN};">
+            <div class="cmp-kicker">Both sides &mdash; what BERT gets</div>
+            <div class="cmp-sent">{both.replace('[MASK]', blank)}</div>
+          </div>
+          <div class="cmp-box" style="--c:{MUTED};">
+            <div class="cmp-kicker">Left side only &mdash; GPT-style</div>
+            <div class="cmp-sent">{left[:-len(tail)].replace('[MASK]', blank)}
+              <span class="cmp-cut">{cut}</span>{tail}</div>
+          </div>
+        </div>""")
+
+        with st.spinner("Running BERT fill-mask..."):
+            fm       = load_fill_mask()
+            res_both = fm(both, top_k=5)
+            res_left = res_both if same else fm(left, top_k=5)
+
+        wb = [r["token_str"].strip() for r in res_both]
+        sb = [r["score"] * 100 for r in res_both]
+        wl = [r["token_str"].strip() for r in res_left]
+        sl = [r["score"] * 100 for r in res_left]
+
+        def prob_of(ws, ss, word):
+            lower = [w.lower() for w in ws]
+            return ss[lower.index(word)] if word in lower else None
+
+        pb, pl = prob_of(wb, sb, true_word), prob_of(wl, sl, true_word)
+
+        if same:
+            note = ("You hid the <b>last</b> word, so there was no right context to take "
+                    "away and both runs are identical. Pick a word nearer the start.")
+        elif pb is not None and pl is None:
+            note = (f"Only the two-sided run recovered the hidden word "
+                    f"<b>{true_word}</b> ({pb:.1f}%). Dropping the right side pushed it out "
+                    f"of the top 5 entirely. <b>That is what bidirectional buys you.</b>")
+        elif pb is not None and pl is not None:
+            note = (f"Both runs found <b>{true_word}</b>, but look at the confidence: "
+                    f"<b>{pb:.1f}%</b> with the full sentence against <b>{pl:.1f}%</b> from "
+                    f"the left side alone.")
         else:
-            with st.spinner("Running BERT fill-mask..."):
-                results = load_fill_mask()(mlm_sentence, top_k=8)
+            note = (f"Neither run recovered <b>{true_word}</b> in its top 5. Try a word the "
+                    f"rest of the sentence pins down harder, such as the verb in "
+                    f"\"the cat sat on the mat\".")
 
-            words  = [r["token_str"].strip() for r in results]
-            scores = [r["score"] * 100 for r in results]
-            top    = words[0]
+        sub("What each run guessed")
+        html(f"""
+        <div class="key" style="border-left-color:{GREEN};">
+          <div class="key-label" style="color:#6EE7B7;">Top guess, side by side</div>
+          <div class="key-text">
+            Both sides &#8594; <b style="color:#6EE7B7;">{wb[0]}</b>
+            <span style="font-size:1rem;color:#CBD5E1;">({sb[0]:.1f}%)</span>
+            &nbsp;&nbsp;&#183;&nbsp;&nbsp;
+            Left only &#8594; <b style="color:#FDA4AF;">{wl[0]}</b>
+            <span style="font-size:1rem;color:#CBD5E1;">({sl[0]:.1f}%)</span>
+          </div>
+          <div style="color:#E2E8F0;font-size:1.04rem;line-height:1.65;margin-top:12px;">
+            {note}</div>
+        </div>""")
 
-            html(f"""
-            <div class="key" style="border-left-color:{GREEN};">
-              <div class="key-label" style="color:#6EE7B7;">BERT's top guess</div>
-              <div class="key-text">{mlm_sentence.replace('[MASK]',
-                f'<b style="color:#6EE7B7;">{top}</b>')}
-              &nbsp;<span style="font-size:1rem;color:#CBD5E1;">({scores[0]:.1f}% confident)</span></div>
-            </div>""")
+        panels = [(wb, sb, GREEN, "#A7E3CB", "Both sides: BERT")]
+        if not same:
+            panels.append((wl, sl, ORANGE, "#F6DFB5", "Left side only: GPT-style"))
 
-            fig, ax = plt.subplots(figsize=(9, 3.8))
-            colors = [GREEN] + ["#A7E3CB"] * (len(words) - 1)
-            bars = ax.barh(words[::-1], scores[::-1], color=colors[::-1], height=0.65)
-            for bar, sc in zip(bars, scores[::-1]):
-                ax.text(bar.get_width() + max(scores) * 0.01,
+        hi = max(max(sb), max(sl)) * 1.20
+        fig, axes = plt.subplots(1, len(panels), figsize=(11.5 if len(panels) == 2 else 7, 3.8),
+                                 squeeze=False)
+        for ax, (ws, ss, strong, weak, title) in zip(axes[0], panels):
+            face = [strong if w.lower() == true_word else weak for w in ws]
+            bars = ax.barh(ws[::-1], ss[::-1], color=face[::-1], height=0.62)
+            for bar, sc, w in zip(bars, ss[::-1], ws[::-1]):
+                if w.lower() == true_word:
+                    bar.set_edgecolor(GOLD)
+                    bar.set_linewidth(2.5)
+                ax.text(bar.get_width() + hi * 0.012,
                         bar.get_y() + bar.get_height() / 2,
-                        f"{sc:.1f}%", va="center", fontsize=11, color="#1E293B")
-            ax.set_xlim(0, max(scores) * 1.18)
+                        f"{sc:.1f}%", va="center", fontsize=10.5, color="#1E293B")
+            ax.set_xlim(0, hi)
             ax.set_xlabel("Probability (%)")
-            ax.tick_params(axis="y", labelsize=13)
-            ax.set_title("Top 8 candidates for [MASK]", loc="left")
+            ax.tick_params(axis="y", labelsize=12)
+            ax.set_title(title, loc="left")
             style_axes(ax)
-            plt.tight_layout()
-            st.pyplot(fig, use_container_width=True)
-            plt.close(fig)
+        plt.tight_layout()
+        st.pyplot(fig, use_container_width=True)
+        plt.close(fig)
+
+        hint("Both panels share one probability scale, so a shorter bar really is a less "
+             "confident guess. The <b>gold outline</b> marks the word that was actually hidden.")
 
     with st.expander("Show the fill-mask code"):
         st.code("""
@@ -870,12 +1033,33 @@ from transformers import pipeline
 
 fill_mask = pipeline("fill-mask", model="bert-base-uncased")
 
-for r in fill_mask("The cat [MASK] on the mat.", top_k=5):
-    print(f"{r['token_str']:12s}  {r['score']*100:.1f}%")
+sentence = "The cat sat on the mat"      # note: no full stop yet
+i        = 2                             # hide "sat"
+words    = sentence.split()
 
-# BERT uses the left context ("the cat")
-# AND the right context ("on the mat") to fill the blank.
-# A left-to-right model like GPT only has "the cat".
+# Re-attach the full stop to BOTH runs. Skip it and the left-only run becomes
+# "The cat [MASK]", where the most likely token is the end of the sentence:
+#     .  80.3%   ;  12.8%   !  5.0%
+# That is BERT answering a punctuation question, not a vocabulary one.
+both = " ".join(words[:i] + ["[MASK]"] + words[i + 1:]) + "."
+left = " ".join(words[:i] + ["[MASK]"]) + "."
+
+for name, text in [("both sides", both), ("left only", left)]:
+    print(f"{name:11s} {text}")
+    for r in fill_mask(text, top_k=5):
+        print(f"    {r['token_str']:11s} {r['score']*100:5.1f}%")
+
+# both sides  The cat [MASK] on the mat.
+#     sat          16.8%      <-- recovered, and ranked first
+#     lay           8.3%
+#     was           6.2%
+# left only   The cat [MASK].
+#     asked         5.3%      <-- "sat" is gone from the top 5 entirely
+#     said          5.1%
+#     barked        4.2%
+#
+# Same model, same blank, same 12 layers. The only thing that changed is whether
+# BERT could read "on the mat". That is what the word bidirectional is doing.
 """, language="python")
 
 
@@ -886,73 +1070,178 @@ elif num == 4:
     section_header(4, TOTAL, "Pretraining Task 2: Next Sentence Prediction",
                    "How BERT learns relationships between two sentences")
 
-    key_idea("Give BERT two sentences and ask one yes-or-no question: "
-             "<b>does B really follow A?</b> The answer is read from the "
-             "<b>[CLS] token</b>.")
+    pretrain_banner(2)
 
-    lead("Many tasks involve two sentences: a question and a passage, a premise and a "
-         "hypothesis, two sentences that may mean the same thing. Masked LM works inside one "
-         "sentence, so NSP was added to teach relationships <b>between</b> sentences.")
+    key_idea("Show BERT two sentences and ask <b>one yes-or-no question</b>: "
+             "does B actually come next? Half of its training pairs really do follow, "
+             "half are random, and telling them apart is what teaches BERT how "
+             "sentences connect.")
 
-    sub("How NSP works")
-    steps([
-        "BERT reads both sentences in one sequence: "
-        "<span class='mono' style='font-family:JetBrains Mono,monospace;color:#002147;'>"
-        "[CLS] sentence A [SEP] sentence B [SEP]</span>",
-        "Half of the training pairs are <b style='color:#0E9F6E;'>IsNext</b> (B really follows A). "
-        "The other half are <b style='color:#E11D48;'>NotNext</b> (B is a random sentence).",
-        "After 12 layers, the <b>[CLS] output vector</b> goes to a small classifier with "
-        "two outputs: IsNext or NotNext.",
-        "The NSP loss and the Masked LM loss are <b>added together</b> and trained jointly.",
-    ])
+    lead("Masked LM works <b>inside</b> a single sentence. But plenty of real tasks come as "
+         "a <b>pair</b>: a question and a passage, a premise and a hypothesis, two sentences "
+         "that might mean the same thing. NSP is the task that teaches BERT to relate two "
+         "sentences at once.")
 
-    sub("Two examples")
-    a_side = (tok('[CLS]', 'cls') + tok('the', 'a') + tok('cat', 'a') + tok('sat', 'a')
-              + tok('on', 'a') + tok('the', 'a') + tok('mat', 'a') + tok('[SEP]', 'sep'))
+    # ── One spine, walked once ───────────────────────────────────────────────
+    sub("The whole flow, start to finish")
+    s2_pills = (tok('[CLS]', 'cls') + tok('the', 'a') + tok('cat', 'a') + tok('sat', 'a')
+                + tok('on', 'a') + tok('the', 'a') + tok('mat', 'a') + tok('[SEP]', 'sep')
+                + tok('it', 'b') + tok('fell', 'b') + tok('asleep', 'b') + tok('[SEP]', 'sep'))
+
+    stages = [
+        (BLUE, "Two sentences go in",
+         '<div class="pipe-io"><b>A</b>&nbsp; The cat sat on the mat.<br>'
+         '<b>B</b>&nbsp; It fell asleep in the sun.</div>'
+         "BERT builds these pairs out of raw text by itself. Nobody labels them."),
+        (PURPLE, "Pack both into one sequence",
+         f'<div class="tok-row" style="margin:6px 0 10px;">{s2_pills}</div>'
+         "One <b>[SEP]</b> closes each sentence, and a <b>segment ID</b> stamps every token "
+         "as belonging to A or B. Now it is a single input, not two."),
+        (ORANGE, "Run all 12 encoder layers",
+         "Every token attends to every other token, straight <b>across</b> the [SEP] "
+         "boundary, so words in B can look back at words in A. By the top layer the slot at "
+         "<b>position 0</b> has read both sentences, which makes it the one place a summary "
+         "of the <b>whole pair</b> can live. That slot is the token written <b>[CLS]</b>."),
+        (GREEN, "Read position 0 through a 2-way classifier",
+         "Take the 768 numbers sitting at position 0, push them through "
+         "<code>Linear(768 &#8594; 2)</code>, then softmax. Out come two probabilities that "
+         "add up to 100%: " + tag("IsNext", GREEN) + tag("NotNext", RED)),
+    ]
+
+    pipe = ""
+    for i, (color, what, why) in enumerate(stages, 1):
+        if i > 1:
+            pipe += '<div class="pipe-link"><span>&#8595;</span></div>'
+        pipe += (f'<div class="pipe-row">'
+                 f'<div class="pipe-num" style="--c:{color};">{i}</div>'
+                 f'<div class="pipe-body" style="--c:{color};">'
+                 f'<div class="pipe-what">{what}</div>'
+                 f'<div class="pipe-why">{why}</div>'
+                 f'</div></div>')
+    html(f'<div class="pipe">{pipe}</div>')
+
+    # ── Dataset construction, kept separate from the forward pass ────────────
+    sub("Where the right answer comes from")
+    hint("Stages 1 to 4 are the <b>forward pass</b>. The <b>label</b> is a separate story: "
+         "BERT invents it while reading the corpus, which is why NSP needs no annotators.")
     grid([
-        card("IsNext &#10003;",
-             f'<div class="tok-row">{a_side}{tok("it","b")}{tok("fell","b")}'
-             f'{tok("asleep","b")}{tok("[SEP]","sep")}</div>'
-             f'[CLS] vector &#8594; classifier &#8594; <b style="color:{GREEN};">IsNext</b>',
-             GREEN),
-        card("NotNext &#10007;",
-             f'<div class="tok-row">{a_side}{tok("stocks","b")}{tok("fell","b")}'
-             f'{tok("today","b")}{tok("[SEP]","sep")}</div>'
-             f'[CLS] vector &#8594; classifier &#8594; <b style="color:{RED};">NotNext</b>',
-             RED),
+        card("50% of pairs &#8594; IsNext &#10003;",
+             "B is <b>the sentence that really came next</b> in the document.<br><br>"
+             '<span class="mono">A: The cat sat on the mat.</span><br>'
+             '<span class="mono">B: It fell asleep in the sun.</span>', GREEN),
+        card("50% of pairs &#8594; NotNext &#10007;",
+             "B is a <b>random sentence</b> pulled from somewhere else in the corpus."
+             "<br><br>"
+             '<span class="mono">A: The cat sat on the mat.</span><br>'
+             '<span class="mono">B: Stocks fell sharply in Tokyo.</span>', RED),
     ])
 
-    tip("Later work (RoBERTa, 2019) found that dropping NSP did not hurt and sometimes "
-        "helped. That is why many BERT variants in Section 8 train with Masked LM only.")
+    # ── Demo: the same four stages, with real numbers ────────────────────────
+    sub("Try it: send your own pair through stages 1 to 4")
+    hint("This runs <b>BertForNextSentencePrediction</b>, the very head BERT was pretrained "
+         "with. Pick a preset or type your own pair.")
 
-    sub("Try it: build an NSP input")
-    hint("Enter two sentences to see how BERT packs them and which segment each token gets.")
+    NSP_PRESETS = {
+        "Coherent follow-on":
+            ("The cat sat on the mat.", "It fell asleep in the sun."),
+        "Unrelated sentence":
+            ("The cat sat on the mat.", "Stocks fell sharply in Tokyo today."),
+        "Same topic, but not a follow-on":
+            ("The cat sat on the mat.",
+             "Cats have been kept as household pets for thousands of years."),
+    }
+
+    st.session_state.setdefault("nsp_a", "The cat sat on the mat.")
+    st.session_state.setdefault("nsp_b", "It fell asleep in the sun.")
 
     with st.container(border=True):
+        pcols = st.columns(len(NSP_PRESETS))
+        for col, (pname, (pa, pb)) in zip(pcols, NSP_PRESETS.items()):
+            with col:
+                if st.button(pname, key=f"nsp_preset_{pname}", use_container_width=True):
+                    st.session_state.nsp_a = pa
+                    st.session_state.nsp_b = pb
+                    st.session_state.nsp_pair = (pa, pb)
+
         c1, c2 = st.columns(2)
         with c1:
-            nsp_a = st.text_input("Sentence A", value="The cat sat on the mat.")
+            st.text_input("Sentence A", key="nsp_a")
         with c2:
-            nsp_b = st.text_input("Sentence B", value="It fell asleep in the sun.")
-        run = st.button("Build NSP input", type="primary")
+            st.text_input("Sentence B", key="nsp_b")
+        if st.button("Score this pair", type="primary"):
+            st.session_state.nsp_pair = (st.session_state.nsp_a, st.session_state.nsp_b)
 
-    if run:
-        tokenizer = load_tokenizer()
-        enc = tokenizer(nsp_a, nsp_b, return_tensors="pt")
-        tokens  = tokenizer.convert_ids_to_tokens(enc["input_ids"][0])
-        seg_ids = enc["token_type_ids"][0].tolist()
+    nsp_a, nsp_b = st.session_state.nsp_a, st.session_state.nsp_b
 
-        sub("Result")
-        token_row(tokens, seg_ids)
-        token_legend()
-        a_n, b_n = seg_ids.count(0), seg_ids.count(1)
-        html(f"""<div class="tok-row">
-          {tag(f'Segment A: {a_n} tokens (with [CLS] and first [SEP])', BLUE)}
-          {tag(f'Segment B: {b_n} tokens (with last [SEP])', PURPLE)}
-          {tag(f'Total: {len(tokens)} tokens', NAVY)}</div>""")
-        hint("After all 12 layers, the [CLS] vector at position 0 encodes the relationship "
-             "between the two sentences. During pretraining it feeds a 2-output layer "
-             "(IsNext / NotNext).")
+    if st.session_state.get("nsp_pair") == (nsp_a, nsp_b):
+        if not nsp_a.strip() or not nsp_b.strip():
+            st.error("Please fill in both sentences.")
+        else:
+            import torch
+            with st.spinner("Running BERT and its next-sentence classifier..."):
+                tokenizer = load_tokenizer()
+                enc = tokenizer(nsp_a, nsp_b, return_tensors="pt")
+                with torch.no_grad():
+                    logits = load_nsp()(**enc).logits[0]
+                probs = logits.softmax(-1)
+            p_is, p_not = probs[0].item() * 100, probs[1].item() * 100
+
+            tokens  = tokenizer.convert_ids_to_tokens(enc["input_ids"][0])
+            seg_ids = enc["token_type_ids"][0].tolist()
+            a_n, b_n = seg_ids.count(0), seg_ids.count(1)
+
+            # Stage 2, for real
+            sub("Stage 2: the sequence BERT actually read")
+            token_row(tokens, seg_ids)
+            token_legend()
+            html(f"""<div class="tok-row">
+              {tag(f'Segment A: {a_n} tokens (with [CLS] and first [SEP])', BLUE)}
+              {tag(f'Segment B: {b_n} tokens (with last [SEP])', PURPLE)}
+              {tag(f'Total: {len(tokens)} tokens', NAVY)}</div>""")
+
+            # Stage 4, for real
+            label  = "IsNext" if p_is >= p_not else "NotNext"
+            colr   = GREEN if label == "IsNext" else RED
+            accent = "#6EE7B7" if label == "IsNext" else "#FDA4AF"
+
+            sub("Stage 4: what came out of position 0")
+            html(f"""
+            <div class="key" style="border-left-color:{colr};">
+              <div class="key-label" style="color:{accent};">Verdict</div>
+              <div class="key-text">{label}
+                <span style="font-size:1.05rem;color:#CBD5E1;">
+                &nbsp;{max(p_is, p_not):.1f}% confident</span>
+              </div>
+            </div>""")
+
+            def nsp_seg(pct, color, name):
+                txt = f"{name} {pct:.1f}%" if pct >= 14 else ""
+                return f'<div style="width:{pct:.2f}%;background:{color};">{txt}</div>'
+
+            html(f'<div class="split">{nsp_seg(p_is, GREEN, "IsNext")}'
+                 f'{nsp_seg(p_not, RED, "NotNext")}</div>')
+
+    tip("BERT was originally pretrained on <b>two objectives at the same time</b>: "
+        "<b>MLM</b> and <b>NSP</b>. <b>RoBERTa</b> (2019) later found NSP was <b>not "
+        "necessary</b>, and could even be <b>unhelpful</b> depending on how the training "
+        "data was constructed, so RoBERTa <b>dropped NSP entirely</b> and pretrained on "
+        "masked-language modeling alone. Most later variants followed (Section 8). For a "
+        "hint at why, run the <b>same topic</b> preset: B plainly does not follow A, yet "
+        "BERT still answers IsNext, because NSP leans heavily on simple topic overlap.")
+
+    sub("Pretraining versus fine-tuning")
+    table(
+        ["Phase", "Objective", "Data it needs"],
+        [
+            ["Original BERT pretraining",
+             f"{tag('MLM', RED)} + {tag('NSP', GREEN)} jointly, in one run",
+             "Raw text only. Self-supervised, so <b>no human labels</b>."],
+            ["BERT fine-tuning",
+             f"{tag('One task-specific objective', BLUE)}",
+             "Your <b>labeled</b> examples for that one task (Section 6)."],
+        ],
+        highlight_rows=(0,),
+    )
 
     with st.expander("Show the NSP code"):
         st.code("""
@@ -969,8 +1258,17 @@ def nsp_score(a, b):
     probs = logits.softmax(-1)[0]
     return {"IsNext": probs[0].item(), "NotNext": probs[1].item()}
 
-print(nsp_score("The cat sat on the mat.", "It fell asleep in the sun."))  # IsNext high
-print(nsp_score("The cat sat on the mat.", "Stocks fell sharply today."))  # NotNext high
+print(nsp_score("The cat sat on the mat.", "It fell asleep in the sun."))
+# {'IsNext': 0.99, 'NotNext': 0.01}   a real follow-on
+
+print(nsp_score("The cat sat on the mat.", "Stocks fell sharply today."))
+# {'IsNext': 0.01, 'NotNext': 0.99}   a random sentence
+
+print(nsp_score("The cat sat on the mat.",
+                "Cats have been kept as household pets for thousands of years."))
+# {'IsNext': 0.98, 'NotNext': 0.02}   same TOPIC, but it does not follow.
+# NSP is fooled, because topic overlap is most of what it learned to detect.
+# RoBERTa dropped NSP for exactly this reason.
 """, language="python")
 
 
@@ -1205,114 +1503,223 @@ optimizer.step()
 # SECTION 7: ENCODER TO DECODER
 # ══════════════════════════════════════════════════════════════════════════════
 elif num == 7:
-    section_header(7, TOTAL, "Sending Encoder Output to a Decoder",
-                   "When you need to generate text, cross-attention connects the two")
+    section_header(7, TOTAL, "Where BERT Fits Real Problems",
+                   "Ideas for a Praxis: sectors, problems, and what research has done already")
 
-    key_idea("BERT <b>understands</b> text but cannot <b>write</b> it. To generate, hand its "
-             "output to a <b>decoder</b>, which reads it through <b>cross-attention</b>.")
+    key_idea("BERT earns its place wherever an organisation is <b>drowning in text</b> and "
+             "someone still has to <b>make a decision</b>. Find that pair in your sector "
+             "and you have a Praxis problem.")
 
-    sub("Two ways to use BERT's output")
+    lead("This section is a <b>menu, not a manual</b>. Each sector below lists problems "
+         "people have actually attacked with BERT, the shape of the task underneath, and "
+         "the domain model and public data that already exist. Use it to find a problem "
+         "worth your next two semesters.")
+
+    # ── The four task shapes, so the sector tables read quickly ──────────────
+    sub("Four shapes almost every application reduces to")
+    hint("You saw these as fine-tuning patterns in Section 6. They are also the fastest way "
+         "to tell whether a messy real-world problem is a BERT problem at all.")
     grid([
-        card("Path A: a task head (Section 6)",
-             "Feed BERT's outputs to a small linear layer. No decoder. The output has a "
-             "fixed size: a class, a label per token, or a start and end position.<br>"
-             f"{tag('Classification', BLUE)}{tag('Named entities', BLUE)}{tag('Span QA', BLUE)}",
-             BLUE),
-        card("Path B: a decoder (this section)",
-             "Pass the full <b>(src_len, 768)</b> output matrix to a Transformer decoder. "
-             "The decoder writes one token at a time, looking back at the encoder output "
-             "through cross-attention.<br>"
-             f"{tag('Translation', GREEN)}{tag('Summarization', GREEN)}{tag('Generation', GREEN)}",
-             GREEN),
+        card("Classification",
+             f"{tag('one label per document', BLUE)}<br>"
+             "Is this complaint about a mortgage? Is this note high-risk? Is this filing "
+             "optimistic? <b>Most Praxis problems are this one.</b>", BLUE),
+        card("Token classification",
+             f"{tag('one label per word', GREEN)}<br>"
+             "Which words are patient names, drug doses, company names, contract parties? "
+             "Pulling structured fields out of free text.", GREEN),
+        card("Sentence pair",
+             f"{tag('a judgement about two texts', PURPLE)}<br>"
+             "Does this patient meet this trial criterion? Does this control satisfy this "
+             "regulation? Does this claim match this evidence?", PURPLE),
+        card("Similarity and search",
+             f"{tag('ranking by meaning', ORANGE)}<br>"
+             "Find the duplicate ticket, the nearest prior case, the matching job posting, "
+             "even when they share no keywords.", ORANGE),
     ])
 
-    sub("How cross-attention works")
-    lead("In self-attention, Q, K and V all come from the same sequence. In cross-attention, "
-         "<b>Q comes from the decoder</b> and <b>K and V come from the encoder</b>.")
+    # ── Sector menu ──────────────────────────────────────────────────────────
+    sub("Pick your sector")
 
-    html(f"""
-    <div class="xattn">
-      <div class="x-box" style="--c:{BLUE};">
-        <div class="x-title">Encoder output</div>
-        <div class="x-desc">(src_len, 768)<br>becomes <b>K</b> and <b>V</b></div>
-      </div>
-      <div class="arrow">&#8594;</div>
-      <div class="x-core">
-        <div style="font-weight:800;font-size:1.1rem;">Cross-attention</div>
-        <div class="f">softmax(Q K<sup>T</sup> / &#8730;d) V</div>
-        <div style="font-size:.9rem;color:#CBD5E1;margin-top:6px;">
-          each decoder position looks at every source position</div>
-      </div>
-      <div class="arrow">&#8592;</div>
-      <div class="x-box" style="--c:{GREEN};">
-        <div class="x-title">Decoder state</div>
-        <div class="x-desc">(tgt_len, 768)<br>becomes <b>Q</b></div>
-      </div>
-    </div>""")
+    def sector(intro, rows, models, data, finding):
+        lead(intro)
+        table(["A problem you could work on", "Shape of the task"], rows)
+        html(f"""
+        <div class="grid g2" style="margin-top:2px;">
+          <div class="card" style="--c:{NAVY};">
+            <div class="card-title">Models already trained for this domain</div>
+            <div class="card-body">{models}</div>
+          </div>
+          <div class="card" style="--c:{ORANGE};">
+            <div class="card-title">Public data people start from</div>
+            <div class="card-body">{data}</div>
+          </div>
+        </div>""")
+        hint(f"<b>What research has found:</b> {finding}")
 
+    t_cls  = tag("Classification", BLUE)
+    t_tok  = tag("Token classification", GREEN)
+    t_pair = tag("Sentence pair", PURPLE)
+    t_sim  = tag("Similarity", ORANGE)
+
+    tabs = st.tabs(["Health", "Finance", "Economics", "IT &amp; Security",
+                    "Legal", "Education"])
+
+    with tabs[0]:
+        sector(
+            "Clinical text is the classic case: the diagnosis codes are structured, but the "
+            "reasoning lives in free-text notes no one has time to read.",
+            [
+                ["Flag patients at risk of readmission from their discharge summary", t_cls],
+                ["Strip names, dates and identifiers out of notes before sharing them", t_tok],
+                ["Detect adverse drug reactions described in patient forum posts", t_tok],
+                ["Assign billing or diagnosis codes to a clinical note", t_cls],
+                ["Screen thousands of papers for a systematic review", t_cls],
+                ["Check whether a patient meets a trial's eligibility criteria", t_pair],
+            ],
+            "<b>BioBERT</b> and <b>PubMedBERT</b> (biomedical literature), "
+            "<b>ClinicalBERT</b> / Bio+Clinical BERT (hospital notes), "
+            "<b>SciBERT</b> (scientific papers).",
+            "<b>MIMIC-III / MIMIC-IV</b> intensive-care notes (free, but credentialed "
+            "access and training required), the <b>n2c2 / i2b2</b> shared-task corpora, "
+            "and <b>PubMed</b> abstracts.",
+            "this is the sector where <b>domain pretraining pays off most</b>. Models "
+            "pretrained on PubMed and clinical notes beat general BERT clearly on "
+            "biomedical benchmarks, because the vocabulary barely overlaps with Wikipedia. "
+            "Readmission prediction from discharge summaries is a well-trodden starting "
+            "point with a published baseline to compare against.")
+
+    with tabs[1]:
+        sector(
+            "Finance generates enormous volumes of narrative text that is already public, "
+            "already timestamped, and already paired with market outcomes you can measure "
+            "against.",
+            [
+                ["Score the tone of an earnings call and relate it to returns", t_cls],
+                ["Classify and route consumer complaints by product and issue", t_cls],
+                ["Analyse the risk-factor sections of annual filings over time", t_cls],
+                ["Screen news for adverse media on a counterparty", t_cls],
+                ["Flag ESG claims that the filing's own evidence does not support", t_pair],
+                ["Extract parties, amounts and dates from loan or trade documents", t_tok],
+            ],
+            "<b>FinBERT</b> is the usual starting point for financial sentiment and tone.",
+            "the <b>CFPB consumer complaint database</b> (large, public, labelled by "
+            "product, an unusually good Praxis dataset), <b>SEC EDGAR</b> filings "
+            "(10-K, 10-Q, free and bulk-downloadable), and the <b>Financial PhraseBank</b>.",
+            "general-purpose sentiment models <b>misread financial language</b>, where "
+            "\"liability\" and \"volatility\" are neutral technical terms rather than "
+            "negative ones. That mismatch is exactly why FinBERT exists, and it is an easy "
+            "comparison to build a Praxis around: general BERT against FinBERT on your own "
+            "labelled sample.")
+
+    with tabs[2]:
+        sector(
+            "Economists increasingly treat text as data. Much published work still relies on "
+            "word counts and dictionaries, which leaves clear room for a contextual model.",
+            [
+                ["Measure policy uncertainty from news coverage over time", t_cls],
+                ["Classify central bank statements as hawkish or dovish", t_cls],
+                ["Build a sentiment index from news to nowcast economic activity", t_cls],
+                ["Code job postings to standard occupation categories", t_cls],
+                ["Track which skills employers demand, and how that shifts", t_tok],
+                ["Match postings to candidate profiles or to training programmes", t_sim],
+            ],
+            "no single dominant domain model. General <b>BERT</b> or <b>RoBERTa</b> "
+            "fine-tuned on your own labelled sample is the normal route here.",
+            "<b>FOMC</b> statements, minutes and transcripts (public), "
+            "<b>O*NET</b> occupation and skill taxonomies, large job-posting collections, "
+            "and congressional or parliamentary bill text.",
+            "the influential uncertainty and sentiment indices were built with "
+            "<b>keyword counting</b>. Replacing that with a contextual model, and showing "
+            "whether the resulting index tracks real outcomes better, is a legitimate and "
+            "well-scoped contribution. Central bank language is a particularly good target "
+            "because the text is public and the policy outcome is observable.")
+
+    with tabs[3]:
+        sector(
+            "IT operations and security both run on short, repetitive, jargon-heavy text, "
+            "and both have decisions attached to every item that arrives.",
+            [
+                ["Route incoming incident tickets to the right team", t_cls],
+                ["Find the duplicate of a new bug report or ticket", t_sim],
+                ["Predict severity from a vulnerability description", t_cls],
+                ["Map a threat-intelligence report to known attack techniques", t_cls],
+                ["Detect phishing and social-engineering attempts in email", t_cls],
+                ["Mine app-store reviews for feature requests and defects", t_cls],
+            ],
+            "<b>CodeBERT</b> and <b>GraphCodeBERT</b> (source code and code search), "
+            "<b>SecureBERT</b> and <b>CySecBERT</b> (security text), and log-oriented "
+            "variants such as <b>LogBERT</b>.",
+            "the <b>NVD / CVE</b> vulnerability corpus with published severity scores "
+            "(public, labelled, and large), <b>MITRE ATT&amp;CK</b>, GitHub issue "
+            "trackers, and Stack Overflow.",
+            "vulnerability severity prediction is popular precisely because NVD hands you "
+            "free labels at scale. Ticket deduplication is the quieter but often more "
+            "valuable target: it is a <b>similarity</b> problem, not a classification one, "
+            "which is why keyword search has always done it badly.")
+
+    with tabs[4]:
+        sector(
+            "Legal and compliance work is reading at volume under time pressure, which is "
+            "the exact shape of problem a language model helps with.",
+            [
+                ["Pull specific clause types out of a stack of contracts", t_tok],
+                ["Check whether an internal control satisfies a regulatory requirement", t_pair],
+                ["Rank documents by relevance for discovery or audit", t_sim],
+                ["Triage incoming public records or FOIA requests", t_cls],
+                ["Classify solicitations and procurement notices", t_cls],
+                ["Find the nearest prior case or precedent to a new matter", t_sim],
+            ],
+            "<b>Legal-BERT</b> and <b>CaseLaw-BERT</b>, trained on legislation, contracts "
+            "and court opinions.",
+            "<b>CUAD</b> (contract clauses, expert-annotated), the <b>LexGLUE</b> benchmark "
+            "suite, <b>EUR-Lex</b> legislation, and US court opinions via CourtListener.",
+            "legal documents break general models in a specific way: they are <b>far longer "
+            "than 512 tokens</b> and the decisive sentence can sit anywhere in them. How "
+            "you split a long document and recombine the pieces often matters more than "
+            "which model you picked, and that choice is itself a publishable question.")
+
+    with tabs[5]:
+        sector(
+            "Education produces a steady stream of student writing that nobody can give "
+            "timely feedback on at scale.",
+            [
+                ["Score short answers or essays against a rubric", t_cls],
+                ["Summarise themes across thousands of course evaluations", t_cls],
+                ["Flag students at risk from their forum posts or help requests", t_cls],
+                ["Match a student's question to existing answers or resources", t_sim],
+                ["Align curriculum text to standards or learning objectives", t_pair],
+            ],
+            "no strong single domain model. General <b>BERT</b> or <b>RoBERTa</b> fine-tuned "
+            "on your institution's own graded sample is the usual approach.",
+            "the <b>ASAP</b> automated essay scoring sets, public MOOC forum corpora, and "
+            "your own institution's anonymised data, which is often the most defensible "
+            "choice for a Praxis.",
+            "automated scoring reaches agreement with human raters that rivals "
+            "rater-to-rater agreement on some prompts, which makes <b>fairness the real "
+            "research question</b> rather than accuracy. Whether a model scores equally "
+            "well across student groups is both the harder problem and the more valuable "
+            "contribution.")
+
+    # ── Choosing well ────────────────────────────────────────────────────────
+    sub("Four questions before you commit")
     steps([
-        "The <b>encoder</b> reads the whole source sentence once and produces its output matrix.",
-        "The <b>decoder</b> writes the output one token at a time. Its current state makes the "
-        "<b>queries Q</b>.",
-        "<b>Cross-attention</b> scores each query against every encoder position (the keys K) "
-        "and mixes the matching values V.",
-        "Each decoder layer has three parts: <b>masked self-attention</b> on the words written "
-        "so far, <b>cross-attention</b> to the encoder, and a <b>feed-forward</b> network.",
+        "<b>Can you legally get the text?</b> The single most common way these projects "
+        "stall. Clinical and financial data carry real access restrictions, so settle this "
+        "in week one, not month three.",
+        "<b>Is there a label, or can you make a few hundred?</b> You do not need a million "
+        "examples. You do need a consistent definition of the thing you are predicting, "
+        "and some public corpora hand you labels for free.",
+        "<b>Would a decision actually change?</b> A classifier nobody acts on is an "
+        "exercise. Name the person whose work changes when the output is good.",
+        "<b>Does a domain model already exist?</b> If so, start there and treat general "
+        "BERT as your baseline. That comparison is often a result in itself.",
     ])
 
-    sub("The full picture")
-    table(
-        ["Stage", "Encoder", "Decoder"],
-        [
-            ["Input", "Source tokens (e.g. an English sentence)",
-             "Target tokens written so far (e.g. French)"],
-            ["Attention", tag("Self-attention, bidirectional", BLUE),
-             tag("Masked self-attention, left to right", GREEN) + "<br>"
-             + tag("Cross-attention to encoder", ORANGE)],
-            ["Output", "(src_len, 768) matrix handed to the decoder",
-             "Probabilities over the vocabulary for the next token"],
-            ["Examples", "T5 encoder, BART encoder, or a pretrained BERT",
-             "T5 decoder, BART decoder"],
-        ],
-    )
-
-    tip("T5 and BART use this same encoder-decoder design but train their own encoders. "
-        "You can also plug a pretrained BERT in as the encoder, for example with Hugging Face's "
-        "<code>EncoderDecoderModel</code> (\"BERT2BERT\").")
-
-    with st.expander("Show cross-attention in PyTorch"):
-        st.code("""
-import torch
-import torch.nn as nn
-
-class CrossAttention(nn.Module):
-    def __init__(self, d_model=768, n_heads=12):
-        super().__init__()
-        self.n_heads  = n_heads
-        self.head_dim = d_model // n_heads          # 64
-        # Q comes from the decoder; K and V come from the encoder
-        self.W_q = nn.Linear(d_model, d_model, bias=False)
-        self.W_k = nn.Linear(d_model, d_model, bias=False)
-        self.W_v = nn.Linear(d_model, d_model, bias=False)
-        self.W_o = nn.Linear(d_model, d_model)
-
-    def forward(self, decoder_hidden, encoder_output):
-        # decoder_hidden: (B, tgt_len, 768)   source of Q
-        # encoder_output: (B, src_len, 768)   source of K and V
-        B, T, D = decoder_hidden.shape
-        S = encoder_output.shape[1]
-
-        Q = self.W_q(decoder_hidden).reshape(B, T, self.n_heads, self.head_dim).transpose(1, 2)
-        K = self.W_k(encoder_output).reshape(B, S, self.n_heads, self.head_dim).transpose(1, 2)
-        V = self.W_v(encoder_output).reshape(B, S, self.n_heads, self.head_dim).transpose(1, 2)
-
-        # every decoder position attends to ALL encoder positions
-        attn = (Q @ K.transpose(-2, -1)) * (self.head_dim ** -0.5)
-        attn = attn.softmax(-1)                              # (B, H, T, S)
-
-        out = (attn @ V).transpose(1, 2).reshape(B, T, D)    # (B, T, 768)
-        return self.W_o(out)
-""", language="python")
+    tip("Two honest cautions. First, the specific models and datasets named above move "
+        "quickly, so <b>verify what is current and what the access terms are</b> before you "
+        "build a plan on one. Second, a domain-pretrained model is usually the stronger "
+        "starting point in a specialised field, and Section 8 covers that family next.")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
