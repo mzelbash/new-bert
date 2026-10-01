@@ -69,7 +69,7 @@ CSS = """
 [data-testid="stExpander"] details{
   background:#fff; border:1px solid var(--border) !important; border-radius:14px !important;
 }
-[data-testid="stExpander"] summary p{ font-weight:600; color:var(--navy); font-size:1rem; }
+[data-testid="stExpander"] summary p{ font-weight:700; color:var(--navy); font-size:1.08rem; }
 [data-testid="stVerticalBlockBorderWrapper"]{ border-radius:16px; }
 
 /* Sidebar radio as a clean menu */
@@ -172,6 +172,20 @@ CSS = """
   margin:6px 0 16px; }
 .tok-legend span.sw{ display:inline-block; width:14px; height:14px; border-radius:4px;
   margin-right:6px; vertical-align:-2px; border:2px solid; }
+
+/* ── Colored key-term bullets ── */
+.blist{ margin:4px 0 18px; padding:0; list-style:none; }
+.blist li{ position:relative; padding:9px 0 9px 28px; font-size:1.04rem; line-height:1.68;
+  color:#334155; border-bottom:1px dashed var(--border); }
+.blist li:last-child{ border-bottom:none; }
+.blist li::before{ content:""; position:absolute; left:7px; top:17px; width:9px; height:9px;
+  border-radius:50%; background:var(--c); }
+.blist .k{ font-weight:800; color:var(--c); }
+.blist b{ color:var(--navy); }
+.blist code{ font-family:'JetBrains Mono', monospace; font-size:.89rem; background:#F1F5F9;
+  padding:2px 6px; border-radius:6px; color:var(--navy); }
+.blist .chain{ display:block; font-family:'JetBrains Mono', monospace; font-size:.9rem;
+  color:var(--navy); background:#F7F9FC; border-radius:8px; padding:7px 11px; margin:7px 0 0; }
 
 /* ── Numbered steps ── */
 .steps{ background:#fff; border:1px solid var(--border); border-radius:16px; padding:6px 22px; }
@@ -421,11 +435,20 @@ def pretrain_banner(active):
                      f'<div class="dual-d">{desc}</div></div>')
     html(f"""
     <div class="dual">
-      <div class="dual-label">One pretraining run &mdash; both objectives at the same time</div>
+      <div class="dual-label">One pretraining run, both objectives at the same time</div>
       <div class="dual-row">{boxes[0]}<div class="dual-op">+</div>{boxes[1]}</div>
       <div class="dual-foot">total loss = <b>MLM loss</b> + <b>NSP loss</b>,
         back-propagated together</div>
     </div>""")
+
+def keyrows(items):
+    """Bulleted rows with a bold, colored lead-in term.
+    items: list of (color, term, text). Pass term="" for a plain bullet."""
+    lis = ""
+    for color, term, text in items:
+        lead_in = f'<span class="k">{term}</span> ' if term else ""
+        lis += f'<li style="--c:{color};">{lead_in}{text}</li>'
+    html(f'<ul class="blist">{lis}</ul>')
 
 def faq(items):
     blocks = "".join(
@@ -896,7 +919,7 @@ elif num == 3:
     sub("Try it: hide a word, then take away the right side")
     hint("Press <b>Load sentence</b>, then <b>click any word</b> to hide it. BERT guesses it "
          "twice: once from the <b>whole sentence</b>, once with every word after the blank "
-         "<b>cut away</b> &mdash; all a left-to-right model like GPT would ever see. The full "
+         "<b>cut away</b>, which is all a left-to-right model like GPT would ever see. The "
          "stop stays on both runs, so BERT is always asked for a <b>word</b>, never "
          "for punctuation.")
 
@@ -941,11 +964,11 @@ elif num == 3:
         html(f"""
         <div class="cmp">
           <div class="cmp-box" style="--c:{GREEN};">
-            <div class="cmp-kicker">Both sides &mdash; what BERT gets</div>
+            <div class="cmp-kicker">Both sides: what BERT gets</div>
             <div class="cmp-sent">{both.replace('[MASK]', blank)}</div>
           </div>
           <div class="cmp-box" style="--c:{MUTED};">
-            <div class="cmp-kicker">Left side only &mdash; GPT-style</div>
+            <div class="cmp-kicker">Left side only: GPT-style</div>
             <div class="cmp-sent">{left[:-len(tail)].replace('[MASK]', blank)}
               <span class="cmp-cut">{cut}</span>{tail}</div>
           </div>
@@ -1504,222 +1527,287 @@ optimizer.step()
 # ══════════════════════════════════════════════════════════════════════════════
 elif num == 7:
     section_header(7, TOTAL, "Where BERT Fits Real Problems",
-                   "Ideas for a Praxis: sectors, problems, and what research has done already")
+                   "Pointers for applied Praxis research: sectors, problems, "
+                   "and what has been tried already")
 
-    key_idea("BERT earns its place wherever an organisation is <b>drowning in text</b> and "
-             "someone still has to <b>make a decision</b>. Find that pair in your sector "
-             "and you have a Praxis problem.")
+    key_idea("Pick a problem where an organisation is <b>buried in text</b> and someone "
+             "still has to <b>make a decision</b>. Then work out whether BERT belongs "
+             "anywhere in the answer.")
 
-    lead("This section is a <b>menu, not a manual</b>. Each sector below lists problems "
-         "people have actually attacked with BERT, the shape of the task underneath, and "
-         "the domain model and public data that already exist. Use it to find a problem "
-         "worth your next two semesters.")
+    lead("A <b>menu, not a manual</b>. Every model and dataset named below is a "
+         "<b>starting point to go and research</b>, not a recommendation. Open the panels "
+         "that apply to you.")
 
-    # ── The four task shapes, so the sector tables read quickly ──────────────
-    sub("Four shapes almost every application reduces to")
-    hint("You saw these as fine-tuning patterns in Section 6. They are also the fastest way "
-         "to tell whether a messy real-world problem is a BERT problem at all.")
-    grid([
-        card("Classification",
-             f"{tag('one label per document', BLUE)}<br>"
-             "Is this complaint about a mortgage? Is this note high-risk? Is this filing "
-             "optimistic? <b>Most Praxis problems are this one.</b>", BLUE),
-        card("Token classification",
-             f"{tag('one label per word', GREEN)}<br>"
-             "Which words are patient names, drug doses, company names, contract parties? "
-             "Pulling structured fields out of free text.", GREEN),
-        card("Sentence pair",
-             f"{tag('a judgement about two texts', PURPLE)}<br>"
-             "Does this patient meet this trial criterion? Does this control satisfy this "
-             "regulation? Does this claim match this evidence?", PURPLE),
-        card("Similarity and search",
-             f"{tag('ranking by meaning', ORANGE)}<br>"
-             "Find the duplicate ticket, the nearest prior case, the matching job posting, "
-             "even when they share no keywords.", ORANGE),
-    ])
+    # ══ 1. How BERT shows up ═════════════════════════════════════════════════
+    with st.expander("1.  How BERT shows up in a real system", expanded=True):
+        lead("Sometimes BERT <b>is</b> the model. More often it is one component and "
+             "something else makes the final call. Four shapes cover most applied work.")
+        keyrows([
+            (GREEN, "BERT is the model.",
+             "Fine-tune it, add a classification or tagging head, ship it. Entirely "
+             "legitimate, and the normal answer for high-volume routing and extraction."),
+            (BLUE, "BERT reranks.",
+             "Keyword or vector search returns 100 candidates, BERT reorders just those."
+             '<span class="chain">search &#8594; 100 candidates &#8594; BERT reranks '
+             "&#8594; the 10 a human reads</span>"),
+            (PURPLE, "BERT retrieves.",
+             "Encode every document once, then search by meaning instead of keywords. "
+             "This is the retrieval half of a RAG system, where an LLM writes the answer."
+             '<span class="chain">documents &#8594; embeddings + index &#8594; retrieve '
+             "&#8594; LLM answers</span>"),
+            (ORANGE, "BERT turns text into variables.",
+             "Pull out labels and fields, join them to the tabular data you already have, "
+             "feed the model you already had."
+             '<span class="chain">notes &#8594; BERT extracts &#8594; join to labs, '
+             "prices, demographics &#8594; existing model</span>"),
+        ])
+        tip("That last one is the most common shape in applied research, and it reframes "
+            "your contribution usefully: the result is <b>&quot;adding text improved the "
+            "existing model by this much, for these cases&quot;</b>, which is far stronger "
+            "than an accuracy number on its own.")
 
-    # ── Sector menu ──────────────────────────────────────────────────────────
-    sub("Pick your sector")
-
-    def sector(intro, rows, models, data, finding):
-        lead(intro)
-        table(["A problem you could work on", "Shape of the task"], rows)
-        html(f"""
-        <div class="grid g2" style="margin-top:2px;">
-          <div class="card" style="--c:{NAVY};">
-            <div class="card-title">Models already trained for this domain</div>
-            <div class="card-body">{models}</div>
-          </div>
-          <div class="card" style="--c:{ORANGE};">
-            <div class="card-title">Public data people start from</div>
-            <div class="card-body">{data}</div>
-          </div>
-        </div>""")
-        hint(f"<b>What research has found:</b> {finding}")
-
-    t_cls  = tag("Classification", BLUE)
-    t_tok  = tag("Token classification", GREEN)
-    t_pair = tag("Sentence pair", PURPLE)
-    t_sim  = tag("Similarity", ORANGE)
-
-    tabs = st.tabs(["Health", "Finance", "Economics", "IT &amp; Security",
-                    "Legal", "Education"])
-
-    with tabs[0]:
-        sector(
-            "Clinical text is the classic case: the diagnosis codes are structured, but the "
-            "reasoning lives in free-text notes no one has time to read.",
+    # ══ 2. Encoder or LLM ════════════════════════════════════════════════════
+    with st.expander("2.  Encoder or LLM? You will be asked"):
+        lead("They are good at <b>different things</b>, and most mature systems use both.")
+        table(
+            ["", f"{tag('Fine-tuned encoder', BLUE)}", f"{tag('Prompted LLM', PURPLE)}"],
             [
-                ["Flag patients at risk of readmission from their discharge summary", t_cls],
-                ["Strip names, dates and identifiers out of notes before sharing them", t_tok],
-                ["Detect adverse drug reactions described in patient forum posts", t_tok],
-                ["Assign billing or diagnosis codes to a clinical note", t_cls],
-                ["Screen thousands of papers for a systematic review", t_cls],
-                ["Check whether a patient meets a trial's eligibility criteria", t_pair],
+                ["Cost at volume", "Flat, on hardware you own.",
+                 "Per call. Can dominate a budget."],
+                ["Speed", "Milliseconds, easy to batch.", "Hundreds of ms to seconds."],
+                ["Where data goes", "Stays in-house. Can run offline.",
+                 "Usually leaves your network."],
+                ["Labels needed", "Hundreds to thousands.", "Often none. Its real edge."],
+                ["Reproducible?", "Fixed weights you can archive.",
+                 "Providers update models, outputs drift."],
+                ["Strongest at", "High-volume classification, extraction, retrieval.",
+                 "Generation, summarising, the long tail."],
             ],
-            "<b>BioBERT</b> and <b>PubMedBERT</b> (biomedical literature), "
-            "<b>ClinicalBERT</b> / Bio+Clinical BERT (hospital notes), "
-            "<b>SciBERT</b> (scientific papers).",
-            "<b>MIMIC-III / MIMIC-IV</b> intensive-care notes (free, but credentialed "
-            "access and training required), the <b>n2c2 / i2b2</b> shared-task corpora, "
-            "and <b>PubMed</b> abstracts.",
-            "this is the sector where <b>domain pretraining pays off most</b>. Models "
-            "pretrained on PubMed and clinical notes beat general BERT clearly on "
-            "biomedical benchmarks, because the vocabulary barely overlaps with Wikipedia. "
-            "Readmission prediction from discharge summaries is a well-trodden starting "
-            "point with a published baseline to compare against.")
+        )
+        keyrows([
+            (GREEN, "The design that often wins:",
+             "have the <b>LLM label a few thousand examples</b>, check a sample by hand, "
+             "then fine-tune a small encoder on the result. You get the LLM's coverage at "
+             "the encoder's cost and speed."),
+            (ORANGE, "A Praxis in itself:",
+             "a careful head-to-head of the two on <b>your</b> task, reporting accuracy "
+             "<b>and</b> cost <b>and</b> latency. Few papers report all three."),
+        ])
 
-    with tabs[1]:
-        sector(
-            "Finance generates enormous volumes of narrative text that is already public, "
-            "already timestamped, and already paired with market outcomes you can measure "
-            "against.",
+    # ══ 3. Which encoder ═════════════════════════════════════════════════════
+    with st.expander("3.  Which encoder for which job"):
+        hint("Chosen by <b>role</b>, not by fame. Names to search for. Section 8 covers "
+             "the family in more detail.")
+        table(
+            ["Its job", "Worth researching"],
             [
-                ["Score the tone of an earnings call and relate it to returns", t_cls],
-                ["Classify and route consumer complaints by product and issue", t_cls],
-                ["Analyse the risk-factor sections of annual filings over time", t_cls],
-                ["Screen news for adverse media on a counterparty", t_cls],
-                ["Flag ESG claims that the filing's own evidence does not support", t_pair],
-                ["Extract parties, amounts and dates from loan or trade documents", t_tok],
+                ["Plain classification accuracy",
+                 "<b>DeBERTa-v3</b>, <b>RoBERTa</b>. Often beat original BERT for free."],
+                ["Documents past 512 tokens",
+                 "<b>ModernBERT</b>, <b>Longformer</b>, <b>BigBird</b>. Essential for "
+                 "legal, clinical and filings text."],
+                ["Embeddings for search",
+                 "<b>Sentence-BERT</b>, and the modern families (<b>E5</b>, <b>BGE</b>, "
+                 "<b>GTE</b>). Plain BERT is a poor sentence encoder out of the box."],
+                ["Reranking a shortlist",
+                 "A <b>cross-encoder</b>: query and candidate scored together. Slower per "
+                 "item, much more accurate."],
+                ["Tight compute or on-premises",
+                 "<b>DistilBERT</b>, <b>MobileBERT</b>, <b>ALBERT</b>."],
+                ["Your specific domain",
+                 "The models in panel 5. Usually the highest-value thing to try first."],
             ],
-            "<b>FinBERT</b> is the usual starting point for financial sentiment and tone.",
-            "the <b>CFPB consumer complaint database</b> (large, public, labelled by "
-            "product, an unusually good Praxis dataset), <b>SEC EDGAR</b> filings "
-            "(10-K, 10-Q, free and bulk-downloadable), and the <b>Financial PhraseBank</b>.",
-            "general-purpose sentiment models <b>misread financial language</b>, where "
-            "\"liability\" and \"volatility\" are neutral technical terms rather than "
-            "negative ones. That mismatch is exactly why FinBERT exists, and it is an easy "
-            "comparison to build a Praxis around: general BERT against FinBERT on your own "
-            "labelled sample.")
+        )
 
-    with tabs[2]:
-        sector(
-            "Economists increasingly treat text as data. Much published work still relies on "
-            "word counts and dictionaries, which leaves clear room for a contextual model.",
-            [
-                ["Measure policy uncertainty from news coverage over time", t_cls],
-                ["Classify central bank statements as hawkish or dovish", t_cls],
-                ["Build a sentiment index from news to nowcast economic activity", t_cls],
-                ["Code job postings to standard occupation categories", t_cls],
-                ["Track which skills employers demand, and how that shifts", t_tok],
-                ["Match postings to candidate profiles or to training programmes", t_sim],
-            ],
-            "no single dominant domain model. General <b>BERT</b> or <b>RoBERTa</b> "
-            "fine-tuned on your own labelled sample is the normal route here.",
-            "<b>FOMC</b> statements, minutes and transcripts (public), "
-            "<b>O*NET</b> occupation and skill taxonomies, large job-posting collections, "
-            "and congressional or parliamentary bill text.",
-            "the influential uncertainty and sentiment indices were built with "
-            "<b>keyword counting</b>. Replacing that with a contextual model, and showing "
-            "whether the resulting index tracks real outcomes better, is a legitimate and "
-            "well-scoped contribution. Central bank language is a particularly good target "
-            "because the text is public and the policy outcome is observable.")
+    # ══ 4. Task shapes ═══════════════════════════════════════════════════════
+    with st.expander("4.  The four task shapes"):
+        hint("You met these as fine-tuning patterns in Section 6. They are also the "
+             "quickest test of whether a messy real problem is a text problem at all.")
+        keyrows([
+            (BLUE, "Classification.",
+             "One label per document. Is this complaint about a mortgage? "
+             "<b>Most Praxis problems are this one.</b>"),
+            (GREEN, "Token classification.",
+             "One label per word. Which words are patient names, drug doses, "
+             "contract parties?"),
+            (PURPLE, "Sentence pair.",
+             "A judgement about two texts together. Does this patient meet this "
+             "criterion? Does this control satisfy this regulation?"),
+            (ORANGE, "Similarity.",
+             "Ranking by meaning. The duplicate ticket, the nearest prior case, even "
+             "with no words in common."),
+        ])
 
-    with tabs[3]:
-        sector(
-            "IT operations and security both run on short, repetitive, jargon-heavy text, "
-            "and both have decisions attached to every item that arrives.",
-            [
-                ["Route incoming incident tickets to the right team", t_cls],
-                ["Find the duplicate of a new bug report or ticket", t_sim],
-                ["Predict severity from a vulnerability description", t_cls],
-                ["Map a threat-intelligence report to known attack techniques", t_cls],
-                ["Detect phishing and social-engineering attempts in email", t_cls],
-                ["Mine app-store reviews for feature requests and defects", t_cls],
-            ],
-            "<b>CodeBERT</b> and <b>GraphCodeBERT</b> (source code and code search), "
-            "<b>SecureBERT</b> and <b>CySecBERT</b> (security text), and log-oriented "
-            "variants such as <b>LogBERT</b>.",
-            "the <b>NVD / CVE</b> vulnerability corpus with published severity scores "
-            "(public, labelled, and large), <b>MITRE ATT&amp;CK</b>, GitHub issue "
-            "trackers, and Stack Overflow.",
-            "vulnerability severity prediction is popular precisely because NVD hands you "
-            "free labels at scale. Ticket deduplication is the quieter but often more "
-            "valuable target: it is a <b>similarity</b> problem, not a classification one, "
-            "which is why keyword search has always done it badly.")
+    # ══ 5. Sectors ═══════════════════════════════════════════════════════════
+    with st.expander("5.  Pick your sector: problems, models, data"):
+        t_cls  = tag("Classification", BLUE)
+        t_tok  = tag("Token classification", GREEN)
+        t_pair = tag("Sentence pair", PURPLE)
+        t_sim  = tag("Similarity", ORANGE)
 
-    with tabs[4]:
-        sector(
-            "Legal and compliance work is reading at volume under time pressure, which is "
-            "the exact shape of problem a language model helps with.",
-            [
-                ["Pull specific clause types out of a stack of contracts", t_tok],
-                ["Check whether an internal control satisfies a regulatory requirement", t_pair],
-                ["Rank documents by relevance for discovery or audit", t_sim],
-                ["Triage incoming public records or FOIA requests", t_cls],
-                ["Classify solicitations and procurement notices", t_cls],
-                ["Find the nearest prior case or precedent to a new matter", t_sim],
-            ],
-            "<b>Legal-BERT</b> and <b>CaseLaw-BERT</b>, trained on legislation, contracts "
-            "and court opinions.",
-            "<b>CUAD</b> (contract clauses, expert-annotated), the <b>LexGLUE</b> benchmark "
-            "suite, <b>EUR-Lex</b> legislation, and US court opinions via CourtListener.",
-            "legal documents break general models in a specific way: they are <b>far longer "
-            "than 512 tokens</b> and the decisive sentence can sit anywhere in them. How "
-            "you split a long document and recombine the pieces often matters more than "
-            "which model you picked, and that choice is itself a publishable question.")
+        def sector(rows, models, data, finding):
+            table(["A problem you could work on", "Task shape"], rows)
+            keyrows([
+                (NAVY,   "Models to research:", models),
+                (ORANGE, "Public data:",        data),
+                (GREEN,  "What research suggests:", finding),
+            ])
 
-    with tabs[5]:
-        sector(
-            "Education produces a steady stream of student writing that nobody can give "
-            "timely feedback on at scale.",
-            [
-                ["Score short answers or essays against a rubric", t_cls],
-                ["Summarise themes across thousands of course evaluations", t_cls],
-                ["Flag students at risk from their forum posts or help requests", t_cls],
-                ["Match a student's question to existing answers or resources", t_sim],
-                ["Align curriculum text to standards or learning objectives", t_pair],
-            ],
-            "no strong single domain model. General <b>BERT</b> or <b>RoBERTa</b> fine-tuned "
-            "on your institution's own graded sample is the usual approach.",
-            "the <b>ASAP</b> automated essay scoring sets, public MOOC forum corpora, and "
-            "your own institution's anonymised data, which is often the most defensible "
-            "choice for a Praxis.",
-            "automated scoring reaches agreement with human raters that rivals "
-            "rater-to-rater agreement on some prompts, which makes <b>fairness the real "
-            "research question</b> rather than accuracy. Whether a model scores equally "
-            "well across student groups is both the harder problem and the more valuable "
-            "contribution.")
+        tabs = st.tabs(["Health", "Finance", "Economics", "IT &amp; Security",
+                        "Legal", "Education"])
 
-    # ── Choosing well ────────────────────────────────────────────────────────
-    sub("Four questions before you commit")
-    steps([
-        "<b>Can you legally get the text?</b> The single most common way these projects "
-        "stall. Clinical and financial data carry real access restrictions, so settle this "
-        "in week one, not month three.",
-        "<b>Is there a label, or can you make a few hundred?</b> You do not need a million "
-        "examples. You do need a consistent definition of the thing you are predicting, "
-        "and some public corpora hand you labels for free.",
-        "<b>Would a decision actually change?</b> A classifier nobody acts on is an "
-        "exercise. Name the person whose work changes when the output is good.",
-        "<b>Does a domain model already exist?</b> If so, start there and treat general "
-        "BERT as your baseline. That comparison is often a result in itself.",
-    ])
+        with tabs[0]:
+            sector(
+                [["Flag readmission risk from a discharge summary", t_cls],
+                 ["Strip identifiers out of notes so they can be shared", t_tok],
+                 ["Detect adverse drug reactions in patient forum posts", t_tok],
+                 ["Assign billing or diagnosis codes to a note", t_cls],
+                 ["Screen thousands of papers for a systematic review", t_cls],
+                 ["Check a patient record against trial eligibility criteria", t_pair]],
+                "<b>BioBERT</b>, <b>PubMedBERT</b>, <b>BlueBERT</b>, <b>SciBERT</b> "
+                "(literature). <b>Bio+Clinical BERT</b>, <b>GatorTron</b> (hospital "
+                "notes). <b>Clinical-Longformer</b> for long notes. Benchmarks: "
+                "<b>BLURB</b>, <b>BLUE</b>.",
+                "<b>MIMIC-III / MIMIC-IV</b> notes (free but credentialed, with required "
+                "training, so start the paperwork early). <b>n2c2 / i2b2</b> corpora. "
+                "<b>PubMed</b> abstracts.",
+                "the sector where <b>domain pretraining pays off most</b>, since clinical "
+                "vocabulary barely overlaps with Wikipedia. The practical gain usually "
+                "shows up when text is added to an <b>existing structured risk model</b>. "
+                "De-identification may be infrastructure you need before anything else is "
+                "permitted.")
 
-    tip("Two honest cautions. First, the specific models and datasets named above move "
-        "quickly, so <b>verify what is current and what the access terms are</b> before you "
-        "build a plan on one. Second, a domain-pretrained model is usually the stronger "
-        "starting point in a specialised field, and Section 8 covers that family next.")
+        with tabs[1]:
+            sector(
+                [["Score earnings-call tone against returns or volatility", t_cls],
+                 ["Route consumer complaints by product and issue", t_cls],
+                 ["Track how risk-factor sections shift year over year", t_cls],
+                 ["Screen news for adverse media on a counterparty", t_cls],
+                 ["Flag ESG claims the filing's own evidence contradicts", t_pair],
+                 ["Extract parties, amounts and dates from loan documents", t_tok]],
+                "<b>FinBERT</b> (more than one model carries this name, so check which you "
+                "cite). <b>SEC-BERT</b> for filings. Benchmark: <b>FLUE</b>.",
+                "<b>CFPB consumer complaints</b> (large, public, labelled by product, an "
+                "unusually good Praxis dataset). <b>SEC EDGAR</b> filings in bulk. "
+                "<b>Financial PhraseBank</b>.",
+                "general sentiment models <b>misread financial language</b>, where "
+                "&quot;liability&quot; and &quot;volatility&quot; are neutral technical terms. That is "
+                "why FinBERT exists, and it makes an easy honest comparison. Treat the "
+                "return-prediction literature carefully: results are sensitive to "
+                "<b>time period and transaction costs</b>, so split by time, never "
+                "at random.")
+
+        with tabs[2]:
+            sector(
+                [["Measure policy uncertainty from news over time", t_cls],
+                 ["Classify central bank statements as hawkish or dovish", t_cls],
+                 ["Build a news sentiment index to nowcast activity", t_cls],
+                 ["Code job postings to standard occupation categories", t_cls],
+                 ["Track which skills employers demand, and how that shifts", t_tok],
+                 ["Match postings to candidate profiles or training", t_sim]],
+                "no dominant domain model. General <b>RoBERTa</b> or <b>DeBERTa-v3</b> "
+                "fine-tuned on your own labelled sample is the normal route. "
+                "<b>EconBERTa</b> is worth a look for economics entity extraction.",
+                "<b>FOMC</b> statements, minutes and transcripts. <b>O*NET</b> occupation "
+                "and skill taxonomies. Large job-posting collections. Legislative text.",
+                "the influential uncertainty and sentiment indices were built by "
+                "<b>counting keywords</b>. Rebuilding one with a contextual model and "
+                "testing whether it tracks real outcomes better is a well-scoped "
+                "contribution. Read the economics <b>text as data</b> methodology "
+                "literature first, since it shapes how you defend your measurement.")
+
+        with tabs[3]:
+            sector(
+                [["Route incoming incident tickets to the right team", t_cls],
+                 ["Find the duplicate of a new bug report", t_sim],
+                 ["Predict severity from a vulnerability description", t_cls],
+                 ["Map a threat report to known attack techniques", t_cls],
+                 ["Detect phishing and social engineering in email", t_cls],
+                 ["Mine app-store reviews for defects and requests", t_cls]],
+                "<b>CodeBERT</b>, <b>GraphCodeBERT</b>, <b>UniXcoder</b> (code). "
+                "<b>SecureBERT</b>, <b>CySecBERT</b>, <b>SecBERT</b> (security text). "
+                "<b>LogBERT</b> for logs. Benchmark: <b>CodeXGLUE</b>.",
+                "<b>NVD / CVE</b> with published severity scores (public, labelled, "
+                "large). <b>MITRE ATT&amp;CK</b>. GitHub issues. Stack Overflow.",
+                "severity prediction is popular because NVD hands you labels at scale, but "
+                "those labels are <b>assigned by people under process pressure</b>, so "
+                "audit a sample before trusting them. Deduplication is the quieter, often "
+                "more valuable target: a <b>similarity</b> problem, not classification, "
+                "which is exactly why keyword search always handled it badly.")
+
+        with tabs[4]:
+            sector(
+                [["Pull specific clause types out of a stack of contracts", t_tok],
+                 ["Check whether an internal control satisfies a regulation", t_pair],
+                 ["Rank documents by relevance for discovery or audit", t_sim],
+                 ["Triage incoming public records requests", t_cls],
+                 ["Classify solicitations and procurement notices", t_cls],
+                 ["Find the nearest prior case to a new matter", t_sim]],
+                "<b>Legal-BERT</b>, <b>CaseLaw-BERT</b>, and jurisdiction-specific "
+                "variants. <b>Longformer</b> or <b>ModernBERT</b> for long documents. "
+                "Benchmarks: <b>LexGLUE</b>, <b>LegalBench</b>, <b>CUAD</b>.",
+                "<b>CUAD</b> (expert-annotated contract clauses). <b>LexGLUE</b>. "
+                "<b>EUR-Lex</b> legislation. US court opinions via CourtListener.",
+                "legal text breaks general models in a specific way: documents run "
+                "<b>far past 512 tokens</b> and the decisive clause can sit anywhere. How "
+                "you split a long document and recombine the pieces often matters more "
+                "than which model you chose, and that choice is itself a publishable "
+                "question. <b>Recall</b> usually matters more than precision, since a "
+                "missed clause costs far more than one extra item to glance at.")
+
+        with tabs[5]:
+            sector(
+                [["Score short answers or essays against a rubric", t_cls],
+                 ["Summarise themes across thousands of course evaluations", t_cls],
+                 ["Flag struggling students from forum posts", t_cls],
+                 ["Match a student question to existing answers", t_sim],
+                 ["Align curriculum text to standards or objectives", t_pair]],
+                "no strong domain model. General <b>DeBERTa-v3</b> or <b>RoBERTa</b> "
+                "fine-tuned on your institution's own graded sample.",
+                "the <b>ASAP</b> essay scoring sets. Public MOOC forum corpora. Your own "
+                "institution's anonymised data, often the most defensible choice.",
+                "automated scoring can match the agreement between two human raters on "
+                "some prompts, which shifts the real question from accuracy to "
+                "<b>fairness and gaming</b>. Whether a scorer behaves equally across "
+                "student groups, and whether length or vocabulary tricks fool it, is the "
+                "harder and more valuable contribution.")
+
+    # ══ 6. Traps ═════════════════════════════════════════════════════════════
+    with st.expander("6.  Four traps specific to BERT"):
+        hint("General methodology (splits, metrics, subgroups, drift) belongs to your "
+             "research methods training and applies to any model. <b>These four come from "
+             "BERT itself.</b>")
+        keyrows([
+            (BLUE, "TF-IDF is a real competitor, not a straw man.",
+             "On keyword-driven classification it often matches a fine-tuned BERT in "
+             "minutes of work, and on <b>long documents</b> it can win outright, because "
+             "it reads the whole document while BERT sees only the first 512 tokens. "
+             "BERT's edge appears when labels are few, texts are short, and meaning turns "
+             "on word order or negation: <i>no evidence of fracture</i> and <i>evidence of "
+             "fracture</i> are near-identical bags of words and opposite findings."),
+            (ORANGE, "Two runs give two answers.",
+             "Below a few thousand examples, BERT fine-tuning is strikingly sensitive to "
+             "the random seed. Scores move several points between runs, and a minority of "
+             "runs <b>collapse into predicting the majority class</b> and never recover. "
+             "This is documented in the literature, not your mistake. Report a mean and "
+             "spread across several seeds so you are not quoting your luckiest run."),
+            (RED, "512 tokens silently redefines what you measured.",
+             "Longer input is truncated without warning, so with long documents you "
+             "evaluated their <b>opening few hundred words</b>, not your documents. Check "
+             "the length distribution <b>before</b> reporting anything. A long tail is a "
+             "finding that drives model choice, not a limitations footnote."),
+            (GREEN, "A domain model needs general BERT beside it.",
+             "<b>&quot;BioBERT reached 0.89&quot;</b> tells a reader nothing. <b>&quot;BioBERT 0.89 "
+             "against BERT 0.81 on our data&quot;</b> answers a real question: does domain "
+             "pretraining transfer to <b>this</b> problem? Run both. The code is identical "
+             "apart from the model name, and the comparison turns a routine step into "
+             "a contribution."),
+        ])
+
+    tip("A caution on every name above. These are <b>search terms, not citations</b>: "
+        "availability, licences and access terms move quickly, and some names cover more "
+        "than one model. Find the paper, confirm what it was trained on, and check you are "
+        "permitted to use it. That verification is part of your literature review.")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
